@@ -5,6 +5,7 @@ import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Screen } from '../../components/Screen';
 import { TextField } from '../../components/TextField';
 import { Button } from '../../components/Button';
+import { SocialAuthButtons } from '../../components/SocialAuthButtons';
 import { colors, spacing, typography } from '../../theme/theme';
 import { logInWithEmail } from '../../services/auth';
 import { AuthStackParamList } from '../../navigation/types';
@@ -47,6 +48,9 @@ export function LoginScreen({ navigation }: Props) {
         />
         <Button label={t('auth.loginButton')} onPress={handleLogin} loading={loading} />
       </View>
+
+      <SocialAuthButtons />
+
       <View style={styles.footerRow}>
         <Text style={styles.footerText}>{t('auth.noAccount')} </Text>
         <Text style={styles.footerLink} onPress={() => navigation.navigate('Signup')}>

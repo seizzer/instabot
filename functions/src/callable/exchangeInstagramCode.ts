@@ -65,17 +65,31 @@ export const exchangeInstagramCode = onCall<Request>(
       // Non-fatal: account still gets connected, user can retry from Settings.
     }
 
-    const igAccountRef = db.collection('igAccounts').doc();
-    await igAccountRef.set({
-      ownerUid: request.auth.uid,
-      igUserId,
-      igUsername,
-      fbPageId: linkedPage.id,
-      status: 'active',
-      tokenExpiresAt,
-      webhookSubscribed,
-      connectedAt: new Date(),
-    });
+    // Reconnecting the same Instagram account (e.g. after token expiry) must
+    // update the existing igAccounts doc rather than create a new one —
+    // existing rules reference the doc id, and a duplicate would leave them
+    // permanently pointed at the now-dead old doc.
+    const existing = await db
+      .collection('igAccounts')
+      .where('ownerUid', '==', request.auth.uid)
+      .where('igUserId', '==', igUserId)
+      .limit(1)
+      .get();
+    const igAccountRef = existing.empty ? db.collection('igAccounts').doc() : existing.docs[0].ref;
+
+    await igAccountRef.set(
+      {
+        ownerUid: request.auth.uid,
+        igUserId,
+        igUsername,
+        fbPageId: linkedPage.id,
+        status: 'active',
+        tokenExpiresAt,
+        webhookSubscribed,
+        connectedAt: new Date(),
+      },
+      { merge: true }
+    );
 
     // Page access tokens (not the user token) are used for all subsequent
     // Graph API calls — comments/messages permissions are granted per-Page.

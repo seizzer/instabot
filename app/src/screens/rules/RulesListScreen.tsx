@@ -55,6 +55,7 @@ export function RulesListScreen({ navigation }: Props) {
                     setRuleStatus(item.id, value ? 'active' : 'paused')
                   }
                   trackColor={{ true: colors.primary, false: colors.disabled }}
+                  accessibilityLabel={item.status === 'active' ? t('rules.pause') : t('rules.resume')}
                 />
               </View>
               <View style={styles.statsRow}>

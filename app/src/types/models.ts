@@ -6,6 +6,7 @@ export interface UserProfile {
   displayName: string | null;
   locale: 'tr' | 'en';
   onboardingCompleted: boolean;
+  notificationsEnabled: boolean;
   createdAt: number;
 }
 

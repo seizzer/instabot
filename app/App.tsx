@@ -7,12 +7,14 @@ import { initI18n } from './src/i18n';
 import { AuthProvider } from './src/store/AuthContext';
 import { RootNavigator } from './src/navigation/RootNavigator';
 import { colors } from './src/theme/theme';
+import { configureGoogleSignIn } from './src/services/socialAuth';
 
 export default function App() {
   const [i18nReady, setI18nReady] = useState(false);
 
   useEffect(() => {
     initI18n().then(() => setI18nReady(true));
+    configureGoogleSignIn();
   }, []);
 
   if (!i18nReady) {

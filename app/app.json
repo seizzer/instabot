@@ -9,7 +9,8 @@
     "userInterfaceStyle": "light",
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.instabot.app"
+      "bundleIdentifier": "com.instabot.app",
+      "usesAppleSignIn": true
     },
     "android": {
       "package": "com.instabot.app",
@@ -27,7 +28,9 @@
     "plugins": [
       "expo-localization",
       "expo-web-browser",
-      "expo-font"
+      "expo-font",
+      "@react-native-google-signin/google-signin",
+      "expo-apple-authentication"
     ]
   }
 }

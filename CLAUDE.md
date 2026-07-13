@@ -53,6 +53,12 @@ META_SETUP.md             Meta Developer panelinde elle yapılacak adımlar
 - **`app/src/types/models.ts` ve `functions/src/lib/types.ts` birbirinin
   kopyasıdır**, paylaşılan bir paket yok. Firestore şemasında bir alan
   değiştirirsen İKİSİNİ DE güncelle.
+- **`exchangeInstagramCode` aynı (ownerUid, igUserId) için var olan `igAccounts`
+  dokümanını GÜNCELLER, yeni doküman oluşturmaz** (bkz.
+  `functions/src/callable/exchangeInstagramCode.ts`). Bunu bozarsan token
+  süresi dolan bir hesabı "yeniden bağlan" ile düzeltmek, eski kuralların
+  işaret ettiği `igAccountId`'yi güncellemeden yeni bir hesap doğurur ve
+  mevcut kurallar sonsuza kadar kırık kalır.
 
 ## Kodlama standartları
 
@@ -74,7 +80,7 @@ META_SETUP.md             Meta Developer panelinde elle yapılacak adımlar
 
 | Yer | Nasıl ayarlanır |
 |---|---|
-| `app/.env` | `app/.env.example`'dan kopyala, Firebase/Meta/RevenueCat public config değerlerini doldur |
+| `app/.env` | `app/.env.example`'dan kopyala, Firebase/Meta/RevenueCat/Google public config değerlerini doldur |
 | Cloud Functions secrets | `firebase functions:secrets:set META_APP_ID` (ve `META_APP_SECRET`, `META_WEBHOOK_VERIFY_TOKEN`, `GEMINI_PROXY_URL`, `GEMINI_PROXY_SHARED_SECRET`, `REVENUECAT_WEBHOOK_SECRET`) — bkz. `functions/src/lib/secrets.ts` |
 | `vercel-gemini-proxy/.env` (Vercel dashboard'da Environment Variables) | `.env.example`'dan kopyala: `GEMINI_API_KEY`, `GEMINI_MODEL`, `PROXY_SHARED_SECRET`, `RATE_LIMIT_PER_MINUTE` |
 
@@ -105,11 +111,28 @@ firebase deploy --only firestore
 Firebase projesini oluşturunca (META_SETUP.md / Firebase Console) bu dosyayı
 güncelle.
 
+## Google/Apple ile giriş
+
+Kod tarafı tamamlandı (`app/src/services/socialAuth.ts`,
+`app/src/components/SocialAuthButtons.tsx`), ama ikisi de **dış kurulum**
+tamamlanmadan çalışmaz:
+
+- **Google:** `@react-native-google-signin/google-signin` kullanıyor (expo-auth-session'ın
+  kendi Google provider'ı deprecated). Firebase Console > Authentication > Sign-in
+  method > Google'ı aç, oradan çıkan **Web client ID**'yi `app/.env` →
+  `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID`'ye yaz. Değer boşsa Google butonu arayüzde
+  hiç görünmez (bkz. `isGoogleSignInAvailable()`), hata fırlatmaz.
+- **Apple:** `expo-apple-authentication` kullanıyor. Apple Developer hesabında
+  "Sign in with Apple" capability'sini açman lazım (app.json'da
+  `ios.usesAppleSignIn: true` zaten ayarlı, EAS Build bunu otomatik entitlement'a
+  çevirir). Sadece iOS'ta ve gerçek cihazda/Apple hesabı bağlı simülatörde çalışır.
+
+Her ikisi de Expo Go'da DEĞİL, sadece bir **development build / EAS Build**'de
+çalışır (native modül içeriyorlar).
+
 ## Henüz yapılmayanlar (bilerek MVP dışında bırakıldı)
 
-- Google/Apple ile giriş: `app/src/services/auth.ts` içinde stub olarak duruyor,
-  gerçek OAuth config'i (expo-auth-session + Google/Apple developer hesabı)
-  gerektirir.
 - Test/lint altyapısı kurulmadı (Jest, ESLint) — proje büyüdükçe eklenmeli.
-- Sektörel şablonlar, çoklu Instagram hesabı yönetimi, AI şablon önerisi arayüzü:
-  PLAN.md'de v1.1/v2 kapsamında.
+- Sektörel şablonlar, çoklu Instagram hesabı yönetimi, AI şablon önerisi arayüzü,
+  push bildirimleri (gönderim tarafı — tercih toggle'ı `users/{uid}.notificationsEnabled`
+  olarak zaten duruyor): PLAN.md'de v1.1/v2 kapsamında.

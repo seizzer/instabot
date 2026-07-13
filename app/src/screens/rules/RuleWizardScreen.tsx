@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Alert, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Screen } from '../../components/Screen';
@@ -7,7 +7,14 @@ import { Button } from '../../components/Button';
 import { TextField } from '../../components/TextField';
 import { colors, spacing, typography } from '../../theme/theme';
 import { useAuth } from '../../store/AuthContext';
-import { subscribeToIgAccounts, createRule, updateRule, markFreePostUsed } from '../../services/firestore';
+import {
+  subscribeToIgAccounts,
+  createRule,
+  updateRule,
+  deleteRule,
+  getRule,
+  markFreePostUsed,
+} from '../../services/firestore';
 import { createEmptyDmFlow, DmFlow, IgAccount, Rule, RuleTargetScope } from '../../types/models';
 import { RulesStackParamList } from '../../navigation/types';
 import { SelectPostStep } from './flowBuilder/SelectPostStep';
@@ -33,12 +40,35 @@ export function RuleWizardScreen({ navigation, route }: Props) {
   const [publicReplyEnabled, setPublicReplyEnabled] = useState(true);
   const [publicReplyText, setPublicReplyText] = useState('');
   const [dmFlow, setDmFlow] = useState<DmFlow>(createEmptyDmFlow());
+  const [existingPriority, setExistingPriority] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [loadingRule, setLoadingRule] = useState(!!editingRuleId);
 
   useEffect(() => {
     if (!user) return;
     return subscribeToIgAccounts(user.uid, setIgAccounts);
   }, [user]);
+
+  useEffect(() => {
+    if (!editingRuleId) return;
+    getRule(editingRuleId).then((rule) => {
+      if (!rule) {
+        Alert.alert(t('common.error') ?? '', 'Kural bulunamadı.');
+        navigation.goBack();
+        return;
+      }
+      setName(rule.name);
+      setTargetScope(rule.targetScope);
+      setTargetPostIds(rule.targetPostIds);
+      setKeywords(rule.keywords);
+      setPublicReplyEnabled(rule.publicReplyEnabled);
+      setPublicReplyText(rule.publicReplyText);
+      setDmFlow(rule.dmFlow);
+      setExistingPriority(rule.priority);
+      setLoadingRule(false);
+    });
+  }, [editingRuleId]);
 
   const activeIgAccount = igAccounts[0] ?? null;
 
@@ -66,7 +96,9 @@ export function RuleWizardScreen({ navigation, route }: Props) {
         publicReplyText,
         dmEnabled: true,
         dmFlow,
-        priority: 0,
+        // A monotonically increasing value keeps newer rules evaluated after
+        // older ones without needing a separate "count existing rules" query.
+        priority: existingPriority ?? Date.now(),
         status: 'active',
         stats: { commentsMatched: 0, dmsSent: 0, dmsFailed: 0, buttonClicks: 0 },
       };
@@ -87,6 +119,27 @@ export function RuleWizardScreen({ navigation, route }: Props) {
     }
   };
 
+  const handleDelete = () => {
+    if (!editingRuleId) return;
+    Alert.alert(t('rules.deleteRule'), t('rules.deleteRuleConfirm'), [
+      { text: t('common.cancel'), style: 'cancel' },
+      {
+        text: t('common.delete'),
+        style: 'destructive',
+        onPress: async () => {
+          setDeleting(true);
+          try {
+            await deleteRule(editingRuleId);
+            navigation.goBack();
+          } catch (error: any) {
+            Alert.alert(t('common.error') ?? '', error.message ?? '');
+            setDeleting(false);
+          }
+        },
+      },
+    ]);
+  };
+
   const canGoNext = () => {
     if (step === 1) return keywords.length > 0;
     return true;
@@ -104,6 +157,14 @@ export function RuleWizardScreen({ navigation, route }: Props) {
     if (step > 0) setStep(step - 1);
     else navigation.goBack();
   };
+
+  if (loadingRule) {
+    return (
+      <Screen>
+        <ActivityIndicator color={colors.primary} style={{ marginTop: spacing.xxl }} />
+      </Screen>
+    );
+  }
 
   return (
     <Screen>
@@ -156,6 +217,16 @@ export function RuleWizardScreen({ navigation, route }: Props) {
           style={styles.footerButton}
         />
       </View>
+
+      {editingRuleId && (
+        <Button
+          label={t('rules.deleteRule')}
+          variant="ghost"
+          onPress={handleDelete}
+          loading={deleting}
+          style={styles.deleteButton}
+        />
+      )}
     </Screen>
   );
 }
@@ -166,4 +237,5 @@ const styles = StyleSheet.create({
   progressDotActive: { backgroundColor: colors.primary },
   footer: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.xl },
   footerButton: { flex: 1 },
+  deleteButton: { marginTop: spacing.sm },
 });

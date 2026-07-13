@@ -3,6 +3,7 @@ import {
   collection,
   deleteDoc,
   doc,
+  getDoc,
   onSnapshot,
   orderBy,
   query,
@@ -53,6 +54,15 @@ export function subscribeToIgAccounts(
 
 // ---- rules ----
 
+function toRule(id: string, data: any): Rule {
+  return {
+    id,
+    ...data,
+    createdAt: toMillis(data.createdAt),
+    updatedAt: toMillis(data.updatedAt),
+  } as Rule;
+}
+
 export function subscribeToRules(ownerUid: string, callback: (rules: Rule[]) => void) {
   const q = query(
     collection(db, 'rules'),
@@ -60,13 +70,14 @@ export function subscribeToRules(ownerUid: string, callback: (rules: Rule[]) => 
     orderBy('priority', 'asc')
   );
   return onSnapshot(q, (snapshot) => {
-    callback(
-      snapshot.docs.map((d) => {
-        const data = d.data();
-        return { id: d.id, ...data } as unknown as Rule;
-      })
-    );
+    callback(snapshot.docs.map((d) => toRule(d.id, d.data())));
   });
+}
+
+export async function getRule(ruleId: string): Promise<Rule | null> {
+  const snapshot = await getDoc(doc(db, 'rules', ruleId));
+  if (!snapshot.exists()) return null;
+  return toRule(snapshot.id, snapshot.data());
 }
 
 export async function createRule(rule: Omit<Rule, 'id' | 'createdAt' | 'updatedAt'>) {

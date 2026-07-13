@@ -100,7 +100,7 @@ async function handleCommentEvent(igBusinessAccountId: string, value: CommentCha
         commenterIgId: value.from.id,
         commenterUsername: value.from.username,
         currentNodeId: startNode.id,
-        status: nodeHasFurtherReply(rule.dmFlow, startNode) ? 'active' : 'completed',
+        status: nodeHasFurtherReply(startNode) ? 'active' : 'completed',
       });
     } catch (err: any) {
       // Most common cause: sending outside Meta's 7-day private-reply window.
@@ -169,7 +169,7 @@ async function handlePostbackEvent(igBusinessAccountId: string, messagingEvent: 
       recipientUserId: commenterIgId,
     });
     nextNodeId = nextNode.id;
-    conversationStatus = nextNode.buttons.some((b) => b.action === 'reply') ? 'active' : 'completed';
+    conversationStatus = nodeHasFurtherReply(nextNode) ? 'active' : 'completed';
   } else if (button.action === 'file' && button.fileUrl) {
     await sendFlowNode({
       igUserId: igBusinessAccountId,

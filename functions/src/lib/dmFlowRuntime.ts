@@ -2,7 +2,7 @@ import { FieldValue } from 'firebase-admin/firestore';
 import { db } from './admin';
 import { findMatchingKeyword } from './textMatch';
 import { sendDirectMessage } from './graphApi';
-import { DmFlow, DmFlowNode, IgAccount, Rule } from './types';
+import { DmFlowNode, IgAccount, Rule } from './types';
 
 export async function getIgAccountByIgUserId(igUserId: string): Promise<IgAccount | null> {
   const snapshot = await db
@@ -95,7 +95,7 @@ export async function upsertConversation(params: {
   return conversationId;
 }
 
-export function nodeHasFurtherReply(flow: DmFlow, node: DmFlowNode): boolean {
+export function nodeHasFurtherReply(node: DmFlowNode): boolean {
   return node.buttons.some((b) => b.action === 'reply');
 }
 
