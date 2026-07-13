@@ -1,0 +1,111 @@
+{
+  "common": {
+    "next": "İleri",
+    "back": "Geri",
+    "save": "Kaydet",
+    "cancel": "İptal",
+    "delete": "Sil",
+    "edit": "Düzenle",
+    "loading": "Yükleniyor...",
+    "error": "Bir şeyler ters gitti",
+    "retry": "Tekrar dene",
+    "done": "Tamam"
+  },
+  "auth": {
+    "loginTitle": "Tekrar hoş geldin",
+    "signupTitle": "Hesap oluştur",
+    "email": "E-posta",
+    "password": "Şifre",
+    "loginButton": "Giriş yap",
+    "signupButton": "Hesap oluştur",
+    "orContinueWith": "veya şununla devam et",
+    "google": "Google ile devam et",
+    "apple": "Apple ile devam et",
+    "noAccount": "Hesabın yok mu?",
+    "haveAccount": "Zaten hesabın var mı?",
+    "createOne": "Oluştur",
+    "loginInstead": "Giriş yap"
+  },
+  "onboarding": {
+    "connectTitle": "Instagram hesabını bağla",
+    "connectSubtitle": "Otomasyonların çalışması için bir Instagram Business veya Creator hesabı bağlaman gerekiyor.",
+    "pageRequiredNote": "Instagram hesabın bir Facebook Sayfası'na bağlı olmalı. Bağlı değilse önce Instagram uygulamasından bunu ayarlaman gerekir.",
+    "connectButton": "Instagram ile bağlan",
+    "successTitle": "Bağlantı başarılı!",
+    "successSubtitle": "@{{username}} hesabın bağlandı. Şimdi ilk kuralını oluşturalım.",
+    "startButton": "İlk kuralımı oluştur"
+  },
+  "home": {
+    "title": "Ana Sayfa",
+    "todayComments": "Bugünkü yorumlar",
+    "dmsSent": "Gönderilen DM",
+    "activeRules": "Aktif kurallar",
+    "newRule": "+ Yeni Kural",
+    "tokenExpiringBanner": "Instagram bağlantının süresi yakında doluyor, lütfen yeniden bağlan.",
+    "emptyState": "Henüz bir kuralın yok. İlk otomasyonunu oluşturarak başla."
+  },
+  "rules": {
+    "title": "Kurallar",
+    "pause": "Duraklat",
+    "resume": "Etkinleştir",
+    "newRule": "Yeni Kural",
+    "editRule": "Kuralı Düzenle",
+    "emptyState": "Henüz kural yok",
+    "step1Title": "Hangi gönderi?",
+    "step1Subtitle": "Bu kural hangi gönderilerdeki yorumları izlesin?",
+    "allPosts": "Tüm gönderiler",
+    "specificPosts": "Belirli gönderiler",
+    "step2Title": "Tetikleyici kelime",
+    "step2Subtitle": "Yorumda hangi kelime(ler) geçerse bu kural çalışsın?",
+    "addKeyword": "Kelime ekle",
+    "step3Title": "Yorum altı cevap",
+    "step3Subtitle": "Yorumun altına otomatik yazılacak genel cevap (isteğe bağlı)",
+    "publicReplyPlaceholder": "Örn: Merak ettiğin için teşekkürler, DM'den detayları gönderdik 💌",
+    "step4Title": "DM akışı",
+    "step4Subtitle": "Kişiye özel gönderilecek mesajı ve butonlarını oluştur",
+    "dmMessagePlaceholder": "Örn: Merhaba {{username}}! Fiyat listemizi aşağıdan görebilirsin 👇",
+    "addButton": "+ Buton ekle (en fazla 3)",
+    "buttonLabel": "Buton yazısı",
+    "buttonActionReply": "Yeni mesaj gönder",
+    "buttonActionUrl": "Link aç",
+    "buttonActionFile": "Dosya/görsel gönder",
+    "nextMessage": "Sıradaki mesaj",
+    "linkUrl": "Link adresi",
+    "fileUrl": "Dosya adresi",
+    "previewTitle": "DM önizleme",
+    "saveRule": "Kuralı kaydet"
+  },
+  "templates": {
+    "title": "Şablonlar",
+    "comingSoon": "Sektörel hazır şablonlar yakında burada"
+  },
+  "logs": {
+    "title": "Kayıtlar",
+    "emptyState": "Henüz bir otomasyon tetiklenmedi",
+    "commentMatch": "Yorum eşleşti",
+    "buttonClick": "Butona tıklandı",
+    "dmSent": "DM gönderildi",
+    "dmFailed": "DM gönderilemedi"
+  },
+  "settings": {
+    "title": "Ayarlar",
+    "account": "Hesap",
+    "connectedAccounts": "Bağlı Instagram hesapları",
+    "language": "Dil",
+    "notifications": "Bildirimler",
+    "subscription": "Abonelik",
+    "help": "Yardım ve destek",
+    "deleteAccount": "Hesabımı ve verilerimi sil",
+    "logout": "Çıkış yap"
+  },
+  "paywall": {
+    "title": "Instabot Pro'ya geç",
+    "freePostNote": "İlk gönderin ücretsiz otomasyon hakkı içerir",
+    "subtitle": "Sınırsız kural, tüm gönderiler ve AI destekli cevaplar için Pro'ya geç",
+    "featureUnlimitedRules": "Sınırsız kural ve gönderi",
+    "featureAiMode": "AI destekli akıllı cevaplar",
+    "featureTemplates": "Sektörel hazır şablonlar",
+    "subscribeButton": "Abone ol",
+    "restoreButton": "Satın alımları geri yükle"
+  }
+}

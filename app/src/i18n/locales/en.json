@@ -1,0 +1,111 @@
+{
+  "common": {
+    "next": "Next",
+    "back": "Back",
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "loading": "Loading...",
+    "error": "Something went wrong",
+    "retry": "Retry",
+    "done": "Done"
+  },
+  "auth": {
+    "loginTitle": "Welcome back",
+    "signupTitle": "Create your account",
+    "email": "Email",
+    "password": "Password",
+    "loginButton": "Log in",
+    "signupButton": "Create account",
+    "orContinueWith": "or continue with",
+    "google": "Continue with Google",
+    "apple": "Continue with Apple",
+    "noAccount": "Don't have an account?",
+    "haveAccount": "Already have an account?",
+    "createOne": "Create one",
+    "loginInstead": "Log in"
+  },
+  "onboarding": {
+    "connectTitle": "Connect your Instagram account",
+    "connectSubtitle": "You need to connect an Instagram Business or Creator account for automations to work.",
+    "pageRequiredNote": "Your Instagram account must be linked to a Facebook Page. If it isn't, set that up in the Instagram app first.",
+    "connectButton": "Connect with Instagram",
+    "successTitle": "Connected!",
+    "successSubtitle": "Your account @{{username}} is connected. Let's create your first rule.",
+    "startButton": "Create my first rule"
+  },
+  "home": {
+    "title": "Home",
+    "todayComments": "Today's comments",
+    "dmsSent": "DMs sent",
+    "activeRules": "Active rules",
+    "newRule": "+ New Rule",
+    "tokenExpiringBanner": "Your Instagram connection is expiring soon, please reconnect.",
+    "emptyState": "You don't have any rules yet. Create your first automation to get started."
+  },
+  "rules": {
+    "title": "Rules",
+    "pause": "Pause",
+    "resume": "Activate",
+    "newRule": "New Rule",
+    "editRule": "Edit Rule",
+    "emptyState": "No rules yet",
+    "step1Title": "Which post?",
+    "step1Subtitle": "Which posts should this rule watch comments on?",
+    "allPosts": "All posts",
+    "specificPosts": "Specific posts",
+    "step2Title": "Trigger keyword",
+    "step2Subtitle": "Which word(s) in a comment should trigger this rule?",
+    "addKeyword": "Add keyword",
+    "step3Title": "Public reply",
+    "step3Subtitle": "Automatic reply posted under the comment (optional)",
+    "publicReplyPlaceholder": "e.g. Thanks for asking, we sent you the details via DM 💌",
+    "step4Title": "DM flow",
+    "step4Subtitle": "Build the message and buttons sent to this person",
+    "dmMessagePlaceholder": "e.g. Hi {{username}}! You can see our price list below 👇",
+    "addButton": "+ Add button (up to 3)",
+    "buttonLabel": "Button label",
+    "buttonActionReply": "Send a new message",
+    "buttonActionUrl": "Open a link",
+    "buttonActionFile": "Send a file/image",
+    "nextMessage": "Next message",
+    "linkUrl": "Link URL",
+    "fileUrl": "File URL",
+    "previewTitle": "DM preview",
+    "saveRule": "Save rule"
+  },
+  "templates": {
+    "title": "Templates",
+    "comingSoon": "Industry-ready templates coming soon"
+  },
+  "logs": {
+    "title": "Activity",
+    "emptyState": "No automation has triggered yet",
+    "commentMatch": "Comment matched",
+    "buttonClick": "Button clicked",
+    "dmSent": "DM sent",
+    "dmFailed": "DM failed"
+  },
+  "settings": {
+    "title": "Settings",
+    "account": "Account",
+    "connectedAccounts": "Connected Instagram accounts",
+    "language": "Language",
+    "notifications": "Notifications",
+    "subscription": "Subscription",
+    "help": "Help & support",
+    "deleteAccount": "Delete my account and data",
+    "logout": "Log out"
+  },
+  "paywall": {
+    "title": "Upgrade to Instabot Pro",
+    "freePostNote": "Your first post includes one free automation",
+    "subtitle": "Upgrade to Pro for unlimited rules, all posts, and AI-powered replies",
+    "featureUnlimitedRules": "Unlimited rules and posts",
+    "featureAiMode": "AI-powered smart replies",
+    "featureTemplates": "Ready-made industry templates",
+    "subscribeButton": "Subscribe",
+    "restoreButton": "Restore purchases"
+  }
+}

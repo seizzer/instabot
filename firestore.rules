@@ -1,0 +1,67 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(uid) {
+      return isSignedIn() && request.auth.uid == uid;
+    }
+
+    // users/{uid} — profile document keyed by the user's own uid.
+    match /users/{uid} {
+      allow read, update: if isOwner(uid);
+      allow create: if isOwner(uid);
+      allow delete: if false; // deletion goes through the deleteMyAccount Cloud Function only
+    }
+
+    // igAccounts/{id} — connection metadata only, no access tokens live here.
+    match /igAccounts/{igAccountId} {
+      allow read: if isSignedIn() && resource.data.ownerUid == request.auth.uid;
+      // Writes happen exclusively via Cloud Functions (Admin SDK bypasses rules).
+      allow write: if false;
+    }
+
+    // igAccountsSecrets/{id} — access tokens. Never exposed to any client.
+    match /igAccountsSecrets/{igAccountId} {
+      allow read, write: if false;
+    }
+
+    // rules/{id} — user-authored automation rules.
+    match /rules/{ruleId} {
+      allow read, update, delete: if isSignedIn() && resource.data.ownerUid == request.auth.uid;
+      allow create: if isSignedIn() && request.resource.data.ownerUid == request.auth.uid;
+    }
+
+    // conversations/{id} — DM flow state, managed only by Cloud Functions.
+    match /conversations/{conversationId} {
+      allow read: if isSignedIn() && resource.data.ownerUid == request.auth.uid;
+      allow write: if false;
+    }
+
+    // automationLogs/{id} — read-only activity feed for the owner.
+    match /automationLogs/{logId} {
+      allow read: if isSignedIn() && resource.data.ownerUid == request.auth.uid;
+      allow write: if false;
+    }
+
+    // subscriptions/{uid} — mirrors RevenueCat entitlement state.
+    match /subscriptions/{uid} {
+      allow read: if isOwner(uid);
+      // freePostUsed is the one field the client is allowed to flip itself;
+      // everything else (tier, entitlementActive, ...) comes from the
+      // RevenueCat webhook via the Admin SDK.
+      allow create: if isOwner(uid) && request.resource.data.keys().hasOnly(['freePostUsed']);
+      allow update: if isOwner(uid)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['freePostUsed']);
+    }
+
+    // webhookEvents/{id} — raw Meta webhook payloads, Cloud Functions only.
+    match /webhookEvents/{eventId} {
+      allow read, write: if false;
+    }
+  }
+}
