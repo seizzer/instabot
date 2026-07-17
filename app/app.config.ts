@@ -1,16 +1,6 @@
 import type { ExpoConfig } from 'expo/config';
 
-// expo/config's ExpoConfig type doesn't know about "autolinking" yet even
-// though Expo's own config schema and EAS Build already support it.
-type ExpoConfigWithAutolinking = ExpoConfig & {
-  autolinking?: {
-    ios?: {
-      buildFromSource?: string[];
-    };
-  };
-};
-
-const config: ExpoConfigWithAutolinking = {
+const config: ExpoConfig = {
   // User-visible app name (home screen, app store listing). The internal
   // slug/scheme/bundleIdentifier stay "instabot" — changing those would
   // break the instabot:// redirect URI already registered in the Meta panel.
@@ -54,18 +44,6 @@ const config: ExpoConfigWithAutolinking = {
   },
   web: {
     favicon: './assets/favicon.png',
-  },
-  // Expo's precompiled RNReanimated iOS artifact and react-native-worklets
-  // don't ship precompiled together — mixing a precompiled reanimated with
-  // a source-built worklets (or vice versa) leaves RNReanimated linked
-  // against an RNWorklets.framework path that doesn't exist in the bundle,
-  // crashing at launch with "Library not loaded: RNWorklets". Forcing both
-  // to build from source together avoids the mismatch.
-  // https://docs.expo.dev/guides/prebuilt-expo-modules/
-  autolinking: {
-    ios: {
-      buildFromSource: ['react-native-reanimated', 'react-native-worklets'],
-    },
   },
   plugins: [
     'expo-localization',
