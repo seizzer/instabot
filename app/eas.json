@@ -9,16 +9,28 @@
       "distribution": "internal",
       "android": {
         "buildType": "apk"
+      },
+      "env": {
+        "EXPO_PUBLIC_META_APP_ID": "1081058337604789",
+        "EXPO_PUBLIC_META_CLIENT_TOKEN": "49734bf7fa4ac6b7980813b9cb62e651"
       }
     },
     "preview": {
       "distribution": "internal",
       "android": {
         "buildType": "apk"
+      },
+      "env": {
+        "EXPO_PUBLIC_META_APP_ID": "1081058337604789",
+        "EXPO_PUBLIC_META_CLIENT_TOKEN": "49734bf7fa4ac6b7980813b9cb62e651"
       }
     },
     "production": {
-      "autoIncrement": true
+      "autoIncrement": true,
+      "env": {
+        "EXPO_PUBLIC_META_APP_ID": "1081058337604789",
+        "EXPO_PUBLIC_META_CLIENT_TOKEN": "49734bf7fa4ac6b7980813b9cb62e651"
+      }
     }
   },
   "submit": {
