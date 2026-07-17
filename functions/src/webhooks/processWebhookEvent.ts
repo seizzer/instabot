@@ -1,13 +1,16 @@
 import { onDocumentCreated } from 'firebase-functions/v2/firestore';
 import { REGION, db } from '../lib/admin';
-import { postCommentReply } from '../lib/graphApi';
+import { getCommentDetails, getInstagramUsername, postCommentReply } from '../lib/graphApi';
 import {
+  classifyDmError,
+  ensureConversationStub,
   findRuleForComment,
   getAccessToken,
   getActiveRulesForAccount,
   getIgAccountByIgUserId,
   incrementRuleStats,
   logAutomationEvent,
+  logMessage,
   nodeHasFurtherReply,
   sendFlowNode,
   upsertConversation,
@@ -21,10 +24,23 @@ interface CommentChangeValue {
   media: { id: string };
 }
 
-interface MessagingPostback {
+// Instagram only tells us the comment a mention happened in — no commenter
+// identity/text, and no info at all when the mention is in someone's own
+// post/story caption rather than a comment (see getCommentDetails/handleMentionEvent).
+interface MentionChangeValue {
+  media_id?: string;
+  comment_id?: string;
+}
+
+interface MessagingEvent {
   sender: { id: string };
   recipient: { id: string };
+  timestamp?: number;
   postback?: { title?: string; payload?: string };
+  reaction?: { mid: string; action: 'react' | 'unreact'; reaction?: string; emoji?: string };
+  referral?: { ref?: string; source?: string; type?: string };
+  read?: { mid?: string };
+  message?: { mid: string; text?: string; is_echo?: boolean };
 }
 
 export const processWebhookEvent = onDocumentCreated(
@@ -35,20 +51,30 @@ export const processWebhookEvent = onDocumentCreated(
     const payload = snapshot.data().rawPayload as {
       entry?: Array<{
         id: string;
-        changes?: Array<{ field: string; value: CommentChangeValue }>;
-        messaging?: MessagingPostback[];
+        changes?: Array<{ field: string; value: CommentChangeValue | MentionChangeValue }>;
+        messaging?: MessagingEvent[];
       }>;
     };
 
     for (const entry of payload.entry ?? []) {
       for (const change of entry.changes ?? []) {
         if (change.field === 'comments') {
-          await handleCommentEvent(entry.id, change.value);
+          await handleCommentEvent(entry.id, change.value as CommentChangeValue);
+        } else if (change.field === 'mentions') {
+          await handleMentionEvent(entry.id, change.value as MentionChangeValue);
         }
       }
       for (const messagingEvent of entry.messaging ?? []) {
         if (messagingEvent.postback) {
           await handlePostbackEvent(entry.id, messagingEvent);
+        } else if (messagingEvent.reaction) {
+          await handleReactionEvent(entry.id, messagingEvent);
+        } else if (messagingEvent.referral) {
+          await handleReferralEvent(entry.id, messagingEvent);
+        } else if (messagingEvent.read) {
+          await handleSeenEvent(entry.id, messagingEvent);
+        } else if (messagingEvent.message) {
+          await handleMessageEvent(entry.id, messagingEvent);
         }
       }
     }
@@ -69,13 +95,22 @@ async function handleCommentEvent(igBusinessAccountId: string, value: CommentCha
   if (!match) return;
   const { rule, matchedKeyword } = match;
 
+  // A/B test: a coin flip per event, not per rule-load, so traffic actually
+  // splits ~50/50 over time instead of sticking to whichever variant won
+  // the first flip for a given cached rule fetch.
+  const useVariantB = !!rule.variantB && Math.random() < 0.5;
+  const publicReplyText = useVariantB ? rule.variantB!.publicReplyText : rule.publicReplyText;
+  const dmFlow = useVariantB ? rule.variantB!.dmFlow : rule.dmFlow;
+  const statsField = useVariantB ? 'statsB' : 'stats';
+
   let publicReplySent = false;
   let dmSent = false;
   let dmError: string | null = null;
+  let dmErrorCode: string | null = null;
 
-  if (rule.publicReplyEnabled && rule.publicReplyText) {
+  if (rule.publicReplyEnabled && publicReplyText) {
     try {
-      await postCommentReply(value.id, rule.publicReplyText, accessToken);
+      await postCommentReply(value.id, publicReplyText, accessToken);
       publicReplySent = true;
     } catch (err) {
       // Public reply failures aren't fatal — the DM attempt below still proceeds.
@@ -83,7 +118,7 @@ async function handleCommentEvent(igBusinessAccountId: string, value: CommentCha
   }
 
   if (rule.dmEnabled) {
-    const startNode = rule.dmFlow.nodes[rule.dmFlow.startNodeId];
+    const startNode = dmFlow.nodes[dmFlow.startNodeId];
     try {
       await sendFlowNode({
         igUserId: igBusinessAccountId,
@@ -91,6 +126,7 @@ async function handleCommentEvent(igBusinessAccountId: string, value: CommentCha
         node: startNode,
         username: value.from.username,
         recipientCommentId: value.id,
+        conversationId: `${igAccount.id}_${value.from.id}`,
       });
       dmSent = true;
       await upsertConversation({
@@ -105,6 +141,7 @@ async function handleCommentEvent(igBusinessAccountId: string, value: CommentCha
     } catch (err: any) {
       // Most common cause: sending outside Meta's 7-day private-reply window.
       dmError = err?.message ?? 'DM_SEND_FAILED';
+      dmErrorCode = classifyDmError(dmError!);
     }
   }
 
@@ -123,16 +160,18 @@ async function handleCommentEvent(igBusinessAccountId: string, value: CommentCha
     dmSent,
     buttonClicked: null,
     dmError,
+    dmErrorCode,
+    variant: useVariantB ? 'b' : 'a',
     aiIntent: null,
     aiConfidence: null,
   });
 
-  await incrementRuleStats(rule.id, 'commentsMatched');
-  if (dmSent) await incrementRuleStats(rule.id, 'dmsSent');
-  if (dmError) await incrementRuleStats(rule.id, 'dmsFailed');
+  await incrementRuleStats(rule.id, `${statsField}.commentsMatched`);
+  if (dmSent) await incrementRuleStats(rule.id, `${statsField}.dmsSent`);
+  if (dmError) await incrementRuleStats(rule.id, `${statsField}.dmsFailed`);
 }
 
-async function handlePostbackEvent(igBusinessAccountId: string, messagingEvent: MessagingPostback) {
+async function handlePostbackEvent(igBusinessAccountId: string, messagingEvent: MessagingEvent) {
   const igAccount = await getIgAccountByIgUserId(igBusinessAccountId);
   if (!igAccount) return;
 
@@ -167,6 +206,7 @@ async function handlePostbackEvent(igBusinessAccountId: string, messagingEvent: 
       node: nextNode,
       username: conversation.commenterUsername,
       recipientUserId: commenterIgId,
+      conversationId,
     });
     nextNodeId = nextNode.id;
     conversationStatus = nodeHasFurtherReply(nextNode) ? 'active' : 'completed';
@@ -177,7 +217,26 @@ async function handlePostbackEvent(igBusinessAccountId: string, messagingEvent: 
       node: { id: 'adhoc', type: 'file', text: '', mediaUrl: button.fileUrl, buttons: [] },
       username: conversation.commenterUsername,
       recipientUserId: commenterIgId,
+      conversationId,
     });
+  } else if (button.action === 'delayed_reply' && button.targetNodeId && button.delayHours) {
+    // Drip/follow-up step — don't send now, queue it for
+    // processScheduledMessages to pick up once it's due.
+    await db.collection('scheduledMessages').add({
+      ownerUid: igAccount.ownerUid,
+      igAccountId: igAccount.id,
+      igUserId: igBusinessAccountId,
+      ruleId: rule.id,
+      commenterIgId,
+      commenterUsername: conversation.commenterUsername,
+      nodeId: button.targetNodeId,
+      conversationId,
+      dueAt: new Date(Date.now() + button.delayHours * 60 * 60 * 1000),
+      sent: false,
+      createdAt: new Date(),
+    });
+    nextNodeId = button.targetNodeId;
+    conversationStatus = 'active';
   }
   // action === 'url': handled entirely client-side by Instagram, nothing to send.
 
@@ -214,5 +273,208 @@ async function handlePostbackEvent(igBusinessAccountId: string, messagingEvent: 
     aiConfidence: null,
   });
 
-  await incrementRuleStats(rule.id, 'buttonClicks');
+  await incrementRuleStats(rule.id, 'stats.buttonClicks');
+}
+
+async function handleMentionEvent(igBusinessAccountId: string, value: MentionChangeValue) {
+  // Mentions in someone's own post/story caption (no comment_id) have no DM
+  // channel available under Meta's messaging window policy — the raw event
+  // is already preserved in webhookEvents, nothing further to do here.
+  if (!value.comment_id) return;
+
+  const igAccount = await getIgAccountByIgUserId(igBusinessAccountId);
+  if (!igAccount || igAccount.status !== 'active') return;
+
+  const accessToken = await getAccessToken(igAccount.id);
+  if (!accessToken) return;
+
+  const rules = await getActiveRulesForAccount(igAccount.id);
+  const rule = rules.find((r) => r.triggerType === 'mention');
+  if (!rule || !rule.dmEnabled) return;
+
+  const comment = await getCommentDetails(value.comment_id, accessToken);
+  const username = comment.username ?? '';
+
+  let dmSent = false;
+  let dmError: string | null = null;
+  let dmErrorCode: string | null = null;
+  const startNode = rule.dmFlow.nodes[rule.dmFlow.startNodeId];
+  try {
+    await sendFlowNode({
+      igUserId: igBusinessAccountId,
+      accessToken,
+      node: startNode,
+      username,
+      recipientCommentId: value.comment_id,
+      // No conversationId here on purpose — mentions don't give us the
+      // commenter's numeric IG id (only username), and conversations are
+      // keyed by igAccountId_commenterIgId everywhere else. Fabricating a
+      // username-keyed id would create a duplicate, inconsistent doc if
+      // this same person later comments/messages normally.
+    });
+    dmSent = true;
+  } catch (err: any) {
+    dmError = err?.message ?? 'DM_SEND_FAILED';
+    dmErrorCode = classifyDmError(dmError!);
+  }
+
+  await logAutomationEvent({
+    ownerUid: igAccount.ownerUid,
+    igAccountId: igAccount.id,
+    ruleId: rule.id,
+    commentId: value.comment_id,
+    commentText: comment.text ?? null,
+    commenterIgId: null,
+    commenterUsername: username,
+    eventType: 'mention_match',
+    matchedTrigger: 'mention',
+    matchedValue: 'mention',
+    publicReplySent: false,
+    dmSent,
+    buttonClicked: null,
+    dmError,
+    dmErrorCode,
+    aiIntent: null,
+    aiConfidence: null,
+  });
+
+  if (dmSent) await incrementRuleStats(rule.id, 'stats.dmsSent');
+  if (dmError) await incrementRuleStats(rule.id, 'stats.dmsFailed');
+}
+
+async function handleReactionEvent(igBusinessAccountId: string, messagingEvent: MessagingEvent) {
+  // Only a fresh reaction should trigger a follow-up — ignore 'unreact'.
+  const reaction = messagingEvent.reaction;
+  if (!reaction || reaction.action !== 'react') return;
+
+  const igAccount = await getIgAccountByIgUserId(igBusinessAccountId);
+  if (!igAccount) return;
+
+  const commenterIgId = messagingEvent.sender.id;
+  const conversationId = `${igAccount.id}_${commenterIgId}`;
+  const conversationSnap = await db.collection('conversations').doc(conversationId).get();
+  if (!conversationSnap.exists) return;
+  const conversation = conversationSnap.data()!;
+
+  const emoji = reaction.emoji ?? reaction.reaction ?? null;
+  const rules = await getActiveRulesForAccount(igAccount.id);
+  const rule = rules.find(
+    (r) => r.triggerType === 'reaction' && (!r.reactionFilter || r.reactionFilter === emoji)
+  );
+  if (!rule || !rule.dmEnabled) return;
+
+  const accessToken = await getAccessToken(igAccount.id);
+  if (!accessToken) return;
+
+  let dmSent = false;
+  let dmError: string | null = null;
+  let dmErrorCode: string | null = null;
+  const startNode = rule.dmFlow.nodes[rule.dmFlow.startNodeId];
+  try {
+    await sendFlowNode({
+      igUserId: igBusinessAccountId,
+      accessToken,
+      node: startNode,
+      username: conversation.commenterUsername,
+      recipientUserId: commenterIgId,
+      conversationId,
+    });
+    dmSent = true;
+    await upsertConversation({
+      igAccountId: igAccount.id,
+      ownerUid: igAccount.ownerUid,
+      ruleId: rule.id,
+      commenterIgId,
+      commenterUsername: conversation.commenterUsername,
+      currentNodeId: startNode.id,
+      status: nodeHasFurtherReply(startNode) ? 'active' : 'completed',
+    });
+  } catch (err: any) {
+    dmError = err?.message ?? 'DM_SEND_FAILED';
+    dmErrorCode = classifyDmError(dmError!);
+  }
+
+  await logAutomationEvent({
+    ownerUid: igAccount.ownerUid,
+    igAccountId: igAccount.id,
+    ruleId: rule.id,
+    commentId: null,
+    commentText: null,
+    commenterIgId,
+    commenterUsername: conversation.commenterUsername,
+    eventType: 'reaction_match',
+    matchedTrigger: 'reaction',
+    matchedValue: emoji ?? 'any',
+    publicReplySent: false,
+    dmSent,
+    buttonClicked: null,
+    dmError,
+    dmErrorCode,
+    aiIntent: null,
+    aiConfidence: null,
+  });
+
+  if (dmSent) await incrementRuleStats(rule.id, 'stats.dmsSent');
+  if (dmError) await incrementRuleStats(rule.id, 'stats.dmsFailed');
+}
+
+async function handleReferralEvent(igBusinessAccountId: string, messagingEvent: MessagingEvent) {
+  const igAccount = await getIgAccountByIgUserId(igBusinessAccountId);
+  if (!igAccount) return;
+
+  const conversationId = `${igAccount.id}_${messagingEvent.sender.id}`;
+  const conversationSnap = await db.collection('conversations').doc(conversationId).get();
+  if (!conversationSnap.exists) return;
+
+  const referralSource = messagingEvent.referral?.source ?? messagingEvent.referral?.ref ?? null;
+  await conversationSnap.ref.update({ referralSource });
+}
+
+async function handleSeenEvent(igBusinessAccountId: string, messagingEvent: MessagingEvent) {
+  const igAccount = await getIgAccountByIgUserId(igBusinessAccountId);
+  if (!igAccount) return;
+
+  const conversationId = `${igAccount.id}_${messagingEvent.sender.id}`;
+  const conversationSnap = await db.collection('conversations').doc(conversationId).get();
+  if (!conversationSnap.exists) return;
+
+  const lastSeenAt = messagingEvent.timestamp ? new Date(messagingEvent.timestamp) : new Date();
+  await conversationSnap.ref.update({ lastSeenAt });
+}
+
+// Plain-text DMs never triggered automation before (silently dropped) — now
+// stored so the manual inbox has a real transcript, including messages from
+// people who never commented/reacted first. `is_echo` events are Meta
+// echoing back messages OUR page sent (already logged by sendFlowNode /
+// sendManualMessage), so those are skipped to avoid double-logging.
+async function handleMessageEvent(igBusinessAccountId: string, messagingEvent: MessagingEvent) {
+  if (messagingEvent.message?.is_echo) return;
+  const text = messagingEvent.message?.text;
+  if (!text) return;
+
+  const igAccount = await getIgAccountByIgUserId(igBusinessAccountId);
+  if (!igAccount) return;
+
+  const commenterIgId = messagingEvent.sender.id;
+  const accessToken = await getAccessToken(igAccount.id);
+  let commenterUsername = '';
+  if (accessToken) {
+    try {
+      commenterUsername = await getInstagramUsername(commenterIgId, accessToken);
+    } catch {
+      // Username is a nice-to-have for display — the transcript still saves without it.
+    }
+  }
+
+  const conversationId = await ensureConversationStub({
+    igAccountId: igAccount.id,
+    ownerUid: igAccount.ownerUid,
+    commenterIgId,
+    commenterUsername,
+  });
+  await logMessage({ conversationId, direction: 'inbound', text });
+  await db
+    .collection('conversations')
+    .doc(conversationId)
+    .update({ lastInteractionAt: new Date() });
 }

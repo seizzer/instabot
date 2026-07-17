@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Alert, StyleSheet, Text, View } from 'react-native';
+import { Alert, Image, StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Screen } from '../../components/Screen';
@@ -31,6 +31,7 @@ export function LoginScreen({ navigation }: Props) {
 
   return (
     <Screen>
+      <Image source={require('../../../assets/icon.png')} style={styles.logo} resizeMode="contain" />
       <Text style={styles.title}>{t('auth.loginTitle')}</Text>
       <View style={styles.form}>
         <TextField
@@ -51,6 +52,10 @@ export function LoginScreen({ navigation }: Props) {
 
       <SocialAuthButtons />
 
+      <Text style={styles.phoneLink} onPress={() => navigation.navigate('PhoneLogin')}>
+        {t('auth.continueWithPhone')}
+      </Text>
+
       <View style={styles.footerRow}>
         <Text style={styles.footerText}>{t('auth.noAccount')} </Text>
         <Text style={styles.footerLink} onPress={() => navigation.navigate('Signup')}>
@@ -62,9 +67,16 @@ export function LoginScreen({ navigation }: Props) {
 }
 
 const styles = StyleSheet.create({
-  title: { ...typography.h1, color: colors.text, marginBottom: spacing.lg },
+  logo: { width: 96, height: 96, alignSelf: 'center', marginBottom: spacing.md },
+  title: { ...typography.h1, color: colors.text, marginBottom: spacing.lg, textAlign: 'center' },
   form: { marginBottom: spacing.lg },
-  footerRow: { flexDirection: 'row', justifyContent: 'center' },
+  phoneLink: {
+    ...typography.bodyBold,
+    color: colors.primary,
+    textAlign: 'center',
+    marginTop: spacing.lg,
+  },
+  footerRow: { flexDirection: 'row', justifyContent: 'center', marginTop: spacing.lg },
   footerText: { ...typography.body, color: colors.textMuted },
   footerLink: { ...typography.bodyBold, color: colors.primary },
 });

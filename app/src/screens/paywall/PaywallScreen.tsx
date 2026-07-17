@@ -13,6 +13,7 @@ import { RulesStackParamList } from '../../navigation/types';
 type Props = NativeStackScreenProps<RulesStackParamList, 'Paywall'>;
 
 const FEATURE_KEYS = [
+  'paywall.featureFixedPrice',
   'paywall.featureUnlimitedRules',
   'paywall.featureAiMode',
   'paywall.featureTemplates',
@@ -55,6 +56,10 @@ export function PaywallScreen({ navigation }: Props) {
       <Text style={styles.note}>{t('paywall.freePostNote')}</Text>
       <Text style={styles.subtitle}>{t('paywall.subtitle')}</Text>
 
+      <Card style={styles.fixedPriceBanner}>
+        <Text style={styles.fixedPriceBannerText}>{t('paywall.fixedPriceBanner')}</Text>
+      </Card>
+
       <Card style={styles.featuresCard}>
         {FEATURE_KEYS.map((key) => (
           <View key={key} style={styles.featureRow}>
@@ -88,6 +93,8 @@ const styles = StyleSheet.create({
   title: { ...typography.h1, color: colors.text, marginBottom: spacing.xs },
   note: { ...typography.caption, color: colors.primary, marginBottom: spacing.sm },
   subtitle: { ...typography.body, color: colors.textMuted, marginBottom: spacing.lg },
+  fixedPriceBanner: { marginBottom: spacing.lg },
+  fixedPriceBannerText: { ...typography.bodyBold, color: colors.primary },
   featuresCard: { marginBottom: spacing.lg },
   featureRow: { flexDirection: 'row', alignItems: 'center', marginBottom: spacing.sm },
   featureCheck: { color: colors.success, fontWeight: '700', marginRight: spacing.sm },

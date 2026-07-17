@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User } from 'firebase/auth';
+import { auth } from '../services/firebase';
 import { subscribeToAuthState, fetchUserProfile } from '../services/auth';
 import { subscribeToSubscription } from '../services/firestore';
 import { configureRevenueCat } from '../services/revenuecat';
@@ -11,6 +12,11 @@ interface AuthContextValue {
   subscription: Subscription | null;
   initializing: boolean;
   refreshProfile: () => Promise<void>;
+  // Firebase's `user.reload()` mutates the SDK's User object in place — it
+  // doesn't emit an onAuthStateChanged event, so React never re-renders on
+  // its own. This forces one (e.g. after a "check email verification"
+  // action) by re-pointing `user` at the (same, but freshly-read) instance.
+  refreshUser: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue>({
@@ -19,6 +25,7 @@ const AuthContext = createContext<AuthContextValue>({
   subscription: null,
   initializing: true,
   refreshProfile: async () => {},
+  refreshUser: async () => {},
 });
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -26,6 +33,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [subscription, setSubscription] = useState<Subscription | null>(null);
   const [initializing, setInitializing] = useState(true);
+  // Bumped by refreshUser() to force a re-render — `user.reload()` mutates
+  // the existing User object in place (same reference), so reading
+  // `user.emailVerified` again after this changes picks up the fresh value
+  // without needing a new object reference.
+  const [, setRefreshTick] = useState(0);
 
   const loadProfile = async (uid: string) => {
     const loaded = await fetchUserProfile(uid);
@@ -56,8 +68,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (user) await loadProfile(user.uid);
   };
 
+  const refreshUser = async () => {
+    await auth.currentUser?.reload();
+    setRefreshTick((t) => t + 1);
+  };
+
   return (
-    <AuthContext.Provider value={{ user, profile, subscription, initializing, refreshProfile }}>
+    <AuthContext.Provider
+      value={{ user, profile, subscription, initializing, refreshProfile, refreshUser }}
+    >
       {children}
     </AuthContext.Provider>
   );

@@ -2,6 +2,7 @@ export const colors = {
   primary: '#FF6B4A',
   primaryDark: '#E5502F',
   primarySoft: '#FFE3DA',
+  accent: '#8B5CF6',
   background: '#FFFFFF',
   surface: '#FAFAFA',
   surfaceAlt: '#F1F1F3',
@@ -13,7 +14,37 @@ export const colors = {
   warning: '#F2A93B',
   danger: '#E14B4B',
   disabled: '#C9C9CD',
+  facebook: '#1877F2',
 } as const;
+
+// Glassmorphism is the primary surface language (cards, headers, modals) —
+// vivid gradients behind, frosted-glass panels on top.
+export const gradients = {
+  // Sunset gradient — brand button fills, hero accents.
+  brand: ['#FF6B4A', '#FF4D8D', '#8B5CF6'] as const,
+  // Soft peach->lavender wash used as the full-screen background instead of
+  // flat white — subtle enough not to fight the glass cards on top.
+  backgroundSoft: ['#FFF6F2', '#FDEFFB', '#F3EEFF'] as const,
+};
+
+export const glass = {
+  background: 'rgba(255,255,255,0.55)',
+  backgroundStrong: 'rgba(255,255,255,0.75)',
+  border: 'rgba(255,255,255,0.6)',
+  blurIntensity: 40,
+};
+
+// Neumorphism is the secondary, tactile language — buttons, switches,
+// inputs, tab bar. Needs a solid (non-transparent) base tone to compute a
+// believable light/dark shadow pair against, tinted toward the brand accent
+// rather than plain black so it stays cohesive with the gradient palette.
+export const neu = {
+  base: '#F5F1FA',
+  shadowLight: '#FFFFFF',
+  shadowDark: 'rgba(139, 92, 246, 0.18)',
+  offset: 6,
+  radius: 10,
+};
 
 export const spacing = {
   xs: 4,

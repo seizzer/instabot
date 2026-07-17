@@ -23,6 +23,7 @@ const ACTIONS: { value: DmFlowButton['action']; labelKey: string }[] = [
   { value: 'reply', labelKey: 'rules.buttonActionReply' },
   { value: 'url', labelKey: 'rules.buttonActionUrl' },
   { value: 'file', labelKey: 'rules.buttonActionFile' },
+  { value: 'delayed_reply', labelKey: 'rules.buttonActionDelayed' },
 ];
 
 export function DmNodeEditor({ flow, nodeId, onChange, depth = 0 }: Props) {
@@ -114,7 +115,23 @@ export function DmNodeEditor({ flow, nodeId, onChange, depth = 0 }: Props) {
             />
           )}
 
-          {button.action === 'reply' &&
+          {button.action === 'delayed_reply' && (
+            <TextField
+              label={t('rules.delayHoursLabel') ?? undefined}
+              placeholder={t('rules.delayHoursPlaceholder') ?? undefined}
+              value={button.delayHours != null ? String(button.delayHours) : ''}
+              keyboardType="number-pad"
+              onChangeText={(value) =>
+                onChange(
+                  updateButton(flow, nodeId, button.id, {
+                    delayHours: value ? Number(value) : null,
+                  })
+                )
+              }
+            />
+          )}
+
+          {(button.action === 'reply' || button.action === 'delayed_reply') &&
             (button.targetNodeId ? (
               <View style={styles.nextMessageWrapper}>
                 <Text style={styles.nextMessageLabel}>{t('rules.nextMessage')}</Text>

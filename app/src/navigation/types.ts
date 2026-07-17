@@ -1,6 +1,8 @@
 export type AuthStackParamList = {
   Login: undefined;
   Signup: undefined;
+  PhoneLogin: undefined;
+  PhoneOtp: { phoneNumber: string };
 };
 
 export type OnboardingStackParamList = {
@@ -11,6 +13,7 @@ export type OnboardingStackParamList = {
 export type MainTabParamList = {
   HomeTab: undefined;
   RulesTab: undefined;
+  InboxTab: undefined;
   TemplatesTab: undefined;
   LogsTab: undefined;
   SettingsTab: undefined;
@@ -18,6 +21,24 @@ export type MainTabParamList = {
 
 export type RulesStackParamList = {
   RulesList: undefined;
+  NewRuleType: undefined;
   RuleWizard: { ruleId?: string };
+  SimpleTriggerRule: { triggerType: 'mention' | 'reaction'; ruleId?: string };
   Paywall: undefined;
+};
+
+export type SettingsStackParamList = {
+  SettingsHome: undefined;
+  Help: undefined;
+};
+
+export type InboxStackParamList = {
+  InboxList: undefined;
+  InboxThread: {
+    conversationId: string;
+    igAccountId: string;
+    recipientUserId: string;
+    commenterUsername: string;
+  };
+  Broadcast: undefined;
 };

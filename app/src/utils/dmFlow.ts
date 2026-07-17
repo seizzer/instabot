@@ -30,6 +30,7 @@ export function addButton(flow: DmFlow, nodeId: string): DmFlow {
     targetNodeId: null,
     url: '',
     fileUrl: null,
+    delayHours: null,
   };
   return updateNode(flow, nodeId, { buttons: [...node.buttons, newButton] });
 }
@@ -52,7 +53,7 @@ function collectDescendants(flow: DmFlow, nodeId: string, acc: Set<string>) {
   const node = flow.nodes[nodeId];
   if (!node) return;
   for (const button of node.buttons) {
-    if (button.action === 'reply' && button.targetNodeId) {
+    if ((button.action === 'reply' || button.action === 'delayed_reply') && button.targetNodeId) {
       collectDescendants(flow, button.targetNodeId, acc);
     }
   }

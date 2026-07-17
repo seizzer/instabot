@@ -40,6 +40,25 @@ service cloud.firestore {
     match /conversations/{conversationId} {
       allow read: if isSignedIn() && resource.data.ownerUid == request.auth.uid;
       allow write: if false;
+
+      // messages/{id} — transcript for the manual inbox. Same owner as the
+      // parent conversation; there's no ownerUid on the message doc itself.
+      match /messages/{messageId} {
+        allow read: if isSignedIn()
+          && get(/databases/$(database)/documents/conversations/$(conversationId)).data.ownerUid == request.auth.uid;
+        allow write: if false;
+      }
+    }
+
+    // broadcasts/{id} — campaign send history, written only by sendBroadcast.
+    match /broadcasts/{broadcastId} {
+      allow read: if isSignedIn() && resource.data.ownerUid == request.auth.uid;
+      allow write: if false;
+    }
+
+    // scheduledMessages/{id} — internal drip-sequence queue, no client access.
+    match /scheduledMessages/{id} {
+      allow read, write: if false;
     }
 
     // automationLogs/{id} — read-only activity feed for the owner.

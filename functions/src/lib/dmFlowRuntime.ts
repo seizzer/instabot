@@ -52,18 +52,26 @@ interface SendNodeParams {
   username: string;
   recipientCommentId?: string;
   recipientUserId?: string;
+  // When known, logs the outbound text to the conversation's transcript —
+  // omitted for the very first message of a comment-triggered flow, where
+  // the conversation doc doesn't exist yet at send time.
+  conversationId?: string;
 }
 
 export async function sendFlowNode(params: SendNodeParams) {
+  const text = fillTemplate(params.node.text, params.username);
   await sendDirectMessage({
     igUserId: params.igUserId,
     accessToken: params.accessToken,
     recipientCommentId: params.recipientCommentId,
     recipientUserId: params.recipientUserId,
-    text: fillTemplate(params.node.text, params.username),
+    text,
     buttons: params.node.buttons,
     mediaUrl: params.node.type === 'file' ? params.node.mediaUrl : null,
   });
+  if (params.conversationId) {
+    await logMessage({ conversationId: params.conversationId, direction: 'outbound', text });
+  }
 }
 
 export async function upsertConversation(params: {
@@ -95,17 +103,89 @@ export async function upsertConversation(params: {
   return conversationId;
 }
 
+// Message transcript storage — separate from `conversations` (which only
+// tracks automation flow position) and `automationLogs` (which only tracks
+// triggered rule events). Powers the manual inbox: real message history,
+// including plain-text messages that never triggered a rule.
+export async function logMessage(params: {
+  conversationId: string;
+  direction: 'inbound' | 'outbound';
+  text: string;
+}) {
+  await db
+    .collection('conversations')
+    .doc(params.conversationId)
+    .collection('messages')
+    .add({
+      direction: params.direction,
+      text: params.text,
+      createdAt: new Date(),
+    });
+}
+
+// Ensures a conversation doc exists even when a user messages the business
+// directly (no prior comment/rule match) — otherwise the inbox would have
+// nowhere to attach the transcript. Automation-triggered conversations
+// already exist by the time this is called, so this only fills the gap for
+// "cold" inbound messages; ruleId/currentNodeId stay null for those.
+export async function ensureConversationStub(params: {
+  igAccountId: string;
+  ownerUid: string;
+  commenterIgId: string;
+  commenterUsername: string;
+}) {
+  const conversationId = `${params.igAccountId}_${params.commenterIgId}`;
+  const ref = db.collection('conversations').doc(conversationId);
+  const snapshot = await ref.get();
+  if (snapshot.exists) return conversationId;
+  await ref.set({
+    ownerUid: params.ownerUid,
+    igAccountId: params.igAccountId,
+    ruleId: null,
+    commenterIgId: params.commenterIgId,
+    commenterUsername: params.commenterUsername,
+    currentNodeId: null,
+    status: 'active',
+    tags: [],
+    lastInteractionAt: new Date(),
+  });
+  return conversationId;
+}
+
 export function nodeHasFurtherReply(node: DmFlowNode): boolean {
   return node.buttons.some((b) => b.action === 'reply');
+}
+
+// Meta's Graph API returns free-text error messages, not a stable enum — we
+// match on documented, stable substrings rather than numeric codes (which
+// vary/aren't reliably documented) so the user gets a specific reason
+// instead of ManyChat's opaque "it just didn't work" complaint.
+export type DmErrorCode = 'outside_window' | 'recipient_unavailable' | 'rate_limited' | 'unknown';
+
+export function classifyDmError(rawMessage: string): DmErrorCode {
+  const lower = rawMessage.toLowerCase();
+  if (lower.includes('window') || lower.includes('24-hour') || lower.includes('7 day') || lower.includes('outside')) {
+    return 'outside_window';
+  }
+  if (lower.includes('recipient') && (lower.includes('not available') || lower.includes('cannot') || lower.includes('unable'))) {
+    return 'recipient_unavailable';
+  }
+  if (lower.includes('rate limit') || lower.includes('too many')) {
+    return 'rate_limited';
+  }
+  return 'unknown';
 }
 
 export async function logAutomationEvent(entry: Record<string, unknown>) {
   await db.collection('automationLogs').add({ ...entry, createdAt: new Date() });
 }
 
+// `field` is the full dot-path under the rule doc, e.g. "stats.dmsSent" or
+// "statsB.commentsMatched" (A/B variant) — not hardcoded to "stats." so
+// callers can target either variant's counters.
 export async function incrementRuleStats(ruleId: string, field: string) {
   await db
     .collection('rules')
     .doc(ruleId)
-    .update({ [`stats.${field}`]: FieldValue.increment(1) });
+    .update({ [field]: FieldValue.increment(1) });
 }

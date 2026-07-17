@@ -110,13 +110,15 @@ export async function getInstagramUsername(igUserId: string, accessToken: string
 }
 
 // Registers the Page for the webhook fields the product depends on: new
-// comments, incoming DMs, and button (postback) clicks.
+// comments, incoming DMs, button (postback) clicks, mentions, DM reactions,
+// and referral/read-receipt metadata (see processWebhookEvent.ts).
 export async function subscribePageWebhooks(pageId: string, pageAccessToken: string) {
   await graphRequest(
     `/${pageId}/subscribed_apps`,
     {
       access_token: pageAccessToken,
-      subscribed_fields: 'comments,messages,messaging_postbacks',
+      subscribed_fields:
+        'comments,messages,messaging_postbacks,mentions,message_reactions,messaging_referral,messaging_seen',
     },
     'POST'
   );
@@ -144,6 +146,16 @@ export async function listInstagramMedia(igUserId: string, accessToken: string) 
 
 export async function postCommentReply(commentId: string, message: string, accessToken: string) {
   return graphRequest(`/${commentId}/replies`, { access_token: accessToken, message }, 'POST');
+}
+
+// The `mentions` webhook only gives us a comment_id, not the commenter's
+// identity/text — this fetches both so mention-triggered DMs can be
+// personalized the same way comment-triggered ones are.
+export async function getCommentDetails(commentId: string, accessToken: string) {
+  return graphRequest<{ text?: string; username?: string }>(`/${commentId}`, {
+    access_token: accessToken,
+    fields: 'text,username',
+  });
 }
 
 // ---- Messaging (private replies / DM with buttons) ----

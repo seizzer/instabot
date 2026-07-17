@@ -283,20 +283,45 @@ Meta Developer panelinde elle yapmanız gereken adımlar ayrı bir **META_SETUP.
 ### MVP (v1.0)
 Yukarıdaki "MVP Kapsamı" bölümü.
 
-### v1.1
-- **AI modu (premium):** Gemini ile niyet sınıflandırma (fiyat sorma / şikayet / teşekkür / genel soru) + doğal dilde otomatik cevap üretimi, marka tonu ayarı (samimi/resmi)
-- **Sektörel şablon kütüphanesi:** butik, diyetisyen, kuaför, emlak, kafe için hazır kural paketleri — tek dokunuşla uygula, sonra özelleştir
-- Çoklu anahtar kelime + AI destekli eş anlamlı genişletme
-- Push bildirimleri: kural tetiklendiğinde / token süresi dolduğunda
-- Basit dönüşüm analitiği: yorum → DM gönderildi → link tıklandı
-- CSV/Sheets olarak lead (DM atılan kişiler) dışa aktarma
+### v1.0.1 (2026-07-17'de eklendi — ManyChat şikayet analizine göre)
+Gerçek ManyChat kullanıcı şikayetlerinden (G2/Capterra/Reddit) çıkan, tekil
+kullanıcı için de değerli olan eksikler MVP'ye dahil edildi:
+- **Manuel inbox / canlı sohbet devralma** — otomasyonun yanında elle mesaj yazma
+- **Broadcast/kampanya mesajı** — mesajlaşma penceresi içindeki kişilere toplu gönderim
+- **Kişi etiketleme** — konuşmalara tag ekleme/kaldırma
+- **Zaman gecikmeli (drip) DM adımları** — "N saat sonra gönder" buton aksiyonu
+- **A/B test** — kural başına iki varyant, ayrı istatistik
+- **Net DM hata mesajları** — genel "gönderilemedi" yerine sebep (mesajlaşma penceresi dışı, alıcıya ulaşılamıyor, hız sınırı vb.)
+- **Uygulama içi Yardım/SSS ekranı**
+- **Sabit fiyat vurgusu** (paywall'da, ManyChat'in kişi-sayısı-bazlı fiyatlandırmasına karşı)
+
+### v1.1 — Tekil kullanıcı için kanal/zeka genişlemesi
+**Not (2026-07-17):** Takım/ajans/çoklu-kullanıcı hesapları (rol, davet,
+konuşma atama) **bilinçli olarak kapsam dışı bırakıldı** — Instabot tekil
+kullanıcı (bir işletme sahibi) için tasarlanıyor, ekip yönetimi ihtiyacı yok.
+
+Sıralama (en "ucuz"/hızlı olandan en büyüğe):
+1. **Messenger (Facebook DM) entegrasyonu** — aynı Meta Graph API ailesi,
+   mevcut `sendDirectMessage`/webhook altyapısı büyük ölçüde yeniden
+   kullanılabilir, en hızlı eklenebilecek kanal.
+2. **AI modu (premium):** Gemini ile niyet sınıflandırma (fiyat sorma /
+   şikayet / teşekkür / genel soru) + doğal dilde otomatik cevap üretimi,
+   marka tonu ayarı (samimi/resmi) — `vercel-gemini-proxy` ve
+   `previewAiReply` altyapısı zaten var, canlı otomasyona bağlanacak.
+3. **WhatsApp Business API entegrasyonu** — ayrı onay süreci + mesaj şablon
+   sistemi gerektiriyor, en büyük parça.
+4. **TikTok / Telegram / SMS** — TR küçük işletme hedef kitlesi için öncelik
+   en düşük, en sona bırakıldı.
+5. **Sektörel şablon kütüphanesi:** butik, diyetisyen, kuaför, emlak, kafe
+   için hazır kural paketleri — tek dokunuşla uygula, sonra özelleştir
+6. Çoklu anahtar kelime + AI destekli eş anlamlı genişletme
+7. Push bildirimleri: kural tetiklendiğinde / token süresi dolduğunda
+8. Basit dönüşüm analitiği: yorum → DM gönderildi → link tıklandı
+9. CSV/Sheets olarak lead (DM atılan kişiler) dışa aktarma
 
 ### v2
-- Çok turlu AI sohbet: DM'de basit SSS/ürün kataloğu botu
-- WhatsApp Business API entegrasyonu (Instagram dışına genişleme)
-- Lead etiketleme + takip hatırlatma (CRM-lite)
 - Zapier/webhook ile dış CRM entegrasyonu
-- Ajans/çoklu müşteri yönetimi için white-label panel
+- (Takım/ajans hesapları — yukarıdaki nota bakın, şu an planlanmıyor, talep gelirse yeniden değerlendirilir)
 
 ---
 

@@ -5,16 +5,26 @@ import { useNavigation } from '@react-navigation/native';
 import { Screen } from '../../components/Screen';
 import { Card } from '../../components/Card';
 import { Button } from '../../components/Button';
+import { TextField } from '../../components/TextField';
 import { colors, spacing, typography } from '../../theme/theme';
 import { useAuth } from '../../store/AuthContext';
-import { logOut, setNotificationsEnabled } from '../../services/auth';
+import {
+  changePassword,
+  logOut,
+  resendVerificationEmail,
+  setNotificationsEnabled,
+  updateDisplayName,
+} from '../../services/auth';
+import { isPasswordValid } from '../../utils/passwordPolicy';
 import { deleteMyAccount, exchangeInstagramCode } from '../../services/functions';
 import { subscribeToIgAccounts } from '../../services/firestore';
 import { connectInstagramAccount } from '../../services/instagramAuth';
 import { changeLanguage, SUPPORTED_LANGUAGES, SupportedLanguage } from '../../i18n';
 import { IgAccount } from '../../types/models';
 
-const SUPPORT_EMAIL = 'destek@instabot.app';
+const PRIVACY_URL = 'https://chatterly.live/privacy.html';
+const TERMS_URL = 'https://chatterly.live/terms.html';
+const DATA_DELETION_URL = 'https://chatterly.live/data-deletion.html';
 
 export function SettingsScreen() {
   const { t, i18n } = useTranslation();
@@ -22,6 +32,21 @@ export function SettingsScreen() {
   const { user, profile, subscription, refreshProfile } = useAuth();
   const [igAccounts, setIgAccounts] = useState<IgAccount[]>([]);
   const [reconnecting, setReconnecting] = useState(false);
+
+  const isPasswordUser = user?.providerData.some((p) => p.providerId === 'password') ?? false;
+
+  const [displayName, setDisplayName] = useState(profile?.displayName ?? '');
+  const [savingProfile, setSavingProfile] = useState(false);
+  useEffect(() => {
+    setDisplayName(profile?.displayName ?? '');
+  }, [profile?.displayName]);
+
+  const [showPasswordChange, setShowPasswordChange] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmNewPassword, setConfirmNewPassword] = useState('');
+  const [changingPassword, setChangingPassword] = useState(false);
+  const [resendingVerification, setResendingVerification] = useState(false);
 
   useEffect(() => {
     if (!user) return;
@@ -57,6 +82,56 @@ export function SettingsScreen() {
     await refreshProfile();
   };
 
+  const handleSaveDisplayName = async () => {
+    if (!user) return;
+    setSavingProfile(true);
+    try {
+      await updateDisplayName(user.uid, displayName.trim());
+      await refreshProfile();
+    } catch (error: any) {
+      Alert.alert(t('common.error') ?? '', error.message ?? '');
+    } finally {
+      setSavingProfile(false);
+    }
+  };
+
+  const handleChangePassword = async () => {
+    if (!user?.email) return;
+    if (!isPasswordValid(newPassword)) {
+      Alert.alert(t('common.error') ?? '', t('auth.passwordRequirements') ?? '');
+      return;
+    }
+    if (newPassword !== confirmNewPassword) {
+      Alert.alert(t('common.error') ?? '', t('auth.passwordMismatch') ?? '');
+      return;
+    }
+    setChangingPassword(true);
+    try {
+      await changePassword(user.email, currentPassword, newPassword);
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmNewPassword('');
+      setShowPasswordChange(false);
+      Alert.alert(t('common.done') ?? '');
+    } catch (error: any) {
+      Alert.alert(t('common.error') ?? '', error.message ?? '');
+    } finally {
+      setChangingPassword(false);
+    }
+  };
+
+  const handleResendVerification = async () => {
+    setResendingVerification(true);
+    try {
+      await resendVerificationEmail();
+      Alert.alert(t('common.done') ?? '', t('auth.verificationSent') ?? '');
+    } catch (error: any) {
+      Alert.alert(t('common.error') ?? '', error.message ?? '');
+    } finally {
+      setResendingVerification(false);
+    }
+  };
+
   return (
     <Screen>
       <Text style={styles.title}>{t('settings.title')}</Text>
@@ -64,6 +139,70 @@ export function SettingsScreen() {
       <Card style={styles.card}>
         <Text style={styles.sectionLabel}>{t('settings.account')}</Text>
         <Text style={styles.value}>{profile?.email}</Text>
+
+        {isPasswordUser && (
+          <View style={styles.verifyRow}>
+            {user?.emailVerified ? (
+              <Text style={styles.accountStatusOk}>{t('settings.emailVerified')}</Text>
+            ) : (
+              <Pressable onPress={handleResendVerification} disabled={resendingVerification}>
+                <Text style={styles.accountStatusBad}>
+                  {resendingVerification ? '…' : t('settings.emailNotVerified')}
+                </Text>
+              </Pressable>
+            )}
+          </View>
+        )}
+
+        <Text style={[styles.sectionLabel, styles.fieldSpacing]}>
+          {t('settings.displayNameLabel')}
+        </Text>
+        <TextField value={displayName} onChangeText={setDisplayName} placeholder={t('settings.displayNameLabel') ?? undefined} />
+        <Button
+          label={t('settings.save')}
+          variant="secondary"
+          onPress={handleSaveDisplayName}
+          loading={savingProfile}
+        />
+
+        {isPasswordUser && (
+          <>
+            <Pressable
+              style={styles.changePasswordToggle}
+              onPress={() => setShowPasswordChange((v) => !v)}
+            >
+              <Text style={styles.rowActionText}>{t('settings.changePassword')}</Text>
+            </Pressable>
+            {showPasswordChange && (
+              <View style={styles.passwordForm}>
+                <TextField
+                  label={t('settings.currentPassword') ?? undefined}
+                  value={currentPassword}
+                  onChangeText={setCurrentPassword}
+                  secureTextEntry
+                />
+                <TextField
+                  label={t('settings.newPassword') ?? undefined}
+                  value={newPassword}
+                  onChangeText={setNewPassword}
+                  secureTextEntry
+                />
+                <Text style={styles.hint}>{t('auth.passwordRequirements')}</Text>
+                <TextField
+                  label={t('settings.confirmNewPassword') ?? undefined}
+                  value={confirmNewPassword}
+                  onChangeText={setConfirmNewPassword}
+                  secureTextEntry
+                />
+                <Button
+                  label={t('settings.save')}
+                  onPress={handleChangePassword}
+                  loading={changingPassword}
+                />
+              </View>
+            )}
+          </>
+        )}
       </Card>
 
       <Card style={styles.card}>
@@ -126,10 +265,20 @@ export function SettingsScreen() {
         />
       </Card>
 
-      <Pressable
-        style={styles.rowAction}
-        onPress={() => Linking.openURL(`mailto:${SUPPORT_EMAIL}`)}
-      >
+      <Card style={styles.card}>
+        <Text style={styles.sectionLabel}>{t('settings.legal')}</Text>
+        <Pressable style={styles.legalRow} onPress={() => Linking.openURL(PRIVACY_URL)}>
+          <Text style={styles.rowActionText}>{t('settings.privacyPolicy')}</Text>
+        </Pressable>
+        <Pressable style={styles.legalRow} onPress={() => Linking.openURL(TERMS_URL)}>
+          <Text style={styles.rowActionText}>{t('settings.termsOfService')}</Text>
+        </Pressable>
+        <Pressable style={styles.legalRow} onPress={() => Linking.openURL(DATA_DELETION_URL)}>
+          <Text style={styles.rowActionText}>{t('settings.dataDeletion')}</Text>
+        </Pressable>
+      </Card>
+
+      <Pressable style={styles.rowAction} onPress={() => navigation.navigate('Help')}>
         <Text style={styles.rowActionText}>{t('settings.help')}</Text>
       </Pressable>
 
@@ -148,7 +297,9 @@ const styles = StyleSheet.create({
   title: { ...typography.h1, color: colors.text, marginBottom: spacing.lg },
   card: { marginBottom: spacing.md },
   sectionLabel: { ...typography.caption, color: colors.textMuted, marginBottom: spacing.xs },
+  fieldSpacing: { marginTop: spacing.md },
   value: { ...typography.bodyBold, color: colors.text },
+  verifyRow: { marginTop: spacing.xs },
   accountRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -169,6 +320,10 @@ const styles = StyleSheet.create({
   langChipActive: { backgroundColor: colors.primary },
   langText: { color: colors.textMuted, fontWeight: '600' },
   langTextActive: { color: colors.textInverse },
+  changePasswordToggle: { paddingVertical: spacing.md },
+  passwordForm: { marginTop: spacing.xs },
+  hint: { ...typography.caption, color: colors.textMuted, marginTop: -spacing.sm, marginBottom: spacing.md },
+  legalRow: { paddingVertical: spacing.sm },
   rowAction: { paddingVertical: spacing.md, alignItems: 'center' },
   rowActionText: { ...typography.bodyBold, color: colors.text },
   rowActionDanger: { ...typography.bodyBold, color: colors.danger },

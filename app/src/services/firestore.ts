@@ -1,5 +1,7 @@
 import {
   addDoc,
+  arrayRemove,
+  arrayUnion,
   collection,
   deleteDoc,
   doc,
@@ -15,6 +17,9 @@ import {
 import { db } from './firebase';
 import {
   AutomationLog,
+  Broadcast,
+  Conversation,
+  ConversationMessage,
   IgAccount,
   Rule,
   RuleStatus,
@@ -147,4 +152,87 @@ export function subscribeToSubscription(
 
 export async function markFreePostUsed(uid: string) {
   await setDoc(doc(db, 'subscriptions', uid), { freePostUsed: true }, { merge: true });
+}
+
+// ---- conversations (manual inbox) ----
+
+export function subscribeToConversations(
+  ownerUid: string,
+  callback: (conversations: Conversation[]) => void
+) {
+  const q = query(
+    collection(db, 'conversations'),
+    where('ownerUid', '==', ownerUid),
+    orderBy('lastInteractionAt', 'desc')
+  );
+  return onSnapshot(q, (snapshot) => {
+    callback(
+      snapshot.docs.map((d) => {
+        const data = d.data();
+        return {
+          id: d.id,
+          ownerUid: data.ownerUid,
+          igAccountId: data.igAccountId,
+          ruleId: data.ruleId ?? null,
+          commenterIgId: data.commenterIgId,
+          commenterUsername: data.commenterUsername,
+          currentNodeId: data.currentNodeId ?? null,
+          status: data.status,
+          referralSource: data.referralSource ?? null,
+          lastSeenAt: data.lastSeenAt ? toMillis(data.lastSeenAt) : null,
+          lastInteractionAt: toMillis(data.lastInteractionAt),
+          tags: data.tags ?? [],
+        } as Conversation;
+      })
+    );
+  });
+}
+
+export function subscribeToConversationMessages(
+  conversationId: string,
+  callback: (messages: ConversationMessage[]) => void
+) {
+  const q = query(
+    collection(db, 'conversations', conversationId, 'messages'),
+    orderBy('createdAt', 'asc')
+  );
+  return onSnapshot(q, (snapshot) => {
+    callback(
+      snapshot.docs.map((d) => {
+        const data = d.data();
+        return {
+          id: d.id,
+          direction: data.direction,
+          text: data.text,
+          createdAt: toMillis(data.createdAt),
+        } as ConversationMessage;
+      })
+    );
+  });
+}
+
+export async function addConversationTag(conversationId: string, tag: string) {
+  await updateDoc(doc(db, 'conversations', conversationId), { tags: arrayUnion(tag) });
+}
+
+export async function removeConversationTag(conversationId: string, tag: string) {
+  await updateDoc(doc(db, 'conversations', conversationId), { tags: arrayRemove(tag) });
+}
+
+// ---- broadcasts ----
+
+export function subscribeToBroadcasts(ownerUid: string, callback: (broadcasts: Broadcast[]) => void) {
+  const q = query(
+    collection(db, 'broadcasts'),
+    where('ownerUid', '==', ownerUid),
+    orderBy('createdAt', 'desc')
+  );
+  return onSnapshot(q, (snapshot) => {
+    callback(
+      snapshot.docs.map((d) => {
+        const data = d.data();
+        return { id: d.id, ...data, createdAt: toMillis(data.createdAt) } as unknown as Broadcast;
+      })
+    );
+  });
 }

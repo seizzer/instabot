@@ -2,12 +2,14 @@ import { Platform } from 'react-native';
 import * as Crypto from 'expo-crypto';
 import * as AppleAuthentication from 'expo-apple-authentication';
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
-import { GoogleAuthProvider, OAuthProvider, signInWithCredential } from 'firebase/auth';
+import { LoginManager, AccessToken, Settings } from 'react-native-fbsdk-next';
+import { FacebookAuthProvider, GoogleAuthProvider, OAuthProvider, signInWithCredential } from 'firebase/auth';
 import { auth } from './firebase';
 import { ensureUserProfileExists } from './auth';
 import { SupportedLanguage } from '../i18n';
 
 let googleConfigured = false;
+let facebookConfigured = false;
 
 // Called once at app startup (see App.tsx). No-ops if the web client ID
 // hasn't been filled in yet so the rest of the app keeps working without it.
@@ -41,6 +43,50 @@ export async function signInWithGoogle(locale: SupportedLanguage) {
   await ensureUserProfileExists(
     userCredential.user.uid,
     userCredential.user.email,
+    userCredential.user.phoneNumber,
+    userCredential.user.displayName,
+    locale
+  );
+  return userCredential.user;
+}
+
+// Called once at app startup (see App.tsx), mirroring configureGoogleSignIn.
+// No-ops if the App ID/Client Token env vars aren't filled in yet.
+export function configureFacebookSignIn() {
+  if (facebookConfigured) return;
+  const appId = process.env.EXPO_PUBLIC_META_APP_ID;
+  const clientToken = process.env.EXPO_PUBLIC_META_CLIENT_TOKEN;
+  if (!appId || !clientToken) {
+    console.warn('EXPO_PUBLIC_META_CLIENT_TOKEN missing — Facebook sign-in disabled');
+    return;
+  }
+  Settings.initializeSDK();
+  facebookConfigured = true;
+}
+
+export function isFacebookSignInAvailable() {
+  return facebookConfigured;
+}
+
+export async function signInWithFacebook(locale: SupportedLanguage) {
+  if (!facebookConfigured) {
+    throw new Error('Facebook ile giriş henüz yapılandırılmadı.');
+  }
+  const result = await LoginManager.logInWithPermissions(['public_profile', 'email']);
+  if (result.isCancelled) {
+    throw new Error('Facebook ile giriş iptal edildi.');
+  }
+  const accessToken = await AccessToken.getCurrentAccessToken();
+  if (!accessToken) {
+    throw new Error('Facebook ile giriş tamamlanamadı.');
+  }
+
+  const credential = FacebookAuthProvider.credential(accessToken.accessToken);
+  const userCredential = await signInWithCredential(auth, credential);
+  await ensureUserProfileExists(
+    userCredential.user.uid,
+    userCredential.user.email,
+    userCredential.user.phoneNumber,
     userCredential.user.displayName,
     locale
   );
@@ -78,6 +124,12 @@ export async function signInWithApple(locale: SupportedLanguage) {
     ? `${appleCredential.fullName.givenName} ${appleCredential.fullName.familyName ?? ''}`.trim()
     : userCredential.user.displayName;
 
-  await ensureUserProfileExists(userCredential.user.uid, userCredential.user.email, displayName, locale);
+  await ensureUserProfileExists(
+    userCredential.user.uid,
+    userCredential.user.email,
+    userCredential.user.phoneNumber,
+    displayName,
+    locale
+  );
   return userCredential.user;
 }

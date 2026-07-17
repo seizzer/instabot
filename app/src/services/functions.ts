@@ -53,3 +53,43 @@ export const deleteMyAccount = httpsCallable<void, DeleteMyAccountResponse>(
   functions,
   'deleteMyAccount'
 );
+
+export interface MintCustomTokenForPhoneAuthRequest {
+  idToken: string;
+}
+export interface MintCustomTokenForPhoneAuthResponse {
+  customToken: string;
+}
+export const mintCustomTokenForPhoneAuth = httpsCallable<
+  MintCustomTokenForPhoneAuthRequest,
+  MintCustomTokenForPhoneAuthResponse
+>(functions, 'mintCustomTokenForPhoneAuth');
+
+export interface SendManualMessageRequest {
+  igAccountId: string;
+  recipientUserId: string;
+  text: string;
+}
+export interface SendManualMessageResponse {
+  success: boolean;
+}
+export const sendManualMessage = httpsCallable<
+  SendManualMessageRequest,
+  SendManualMessageResponse
+>(functions, 'sendManualMessage');
+
+export interface SendBroadcastRequest {
+  igAccountId: string;
+  text: string;
+  targetTag: string | null;
+}
+export interface SendBroadcastResponse {
+  broadcastId: string;
+  recipientCount: number;
+  sentCount: number;
+  failedCount: number;
+}
+export const sendBroadcast = httpsCallable<SendBroadcastRequest, SendBroadcastResponse>(
+  functions,
+  'sendBroadcast'
+);

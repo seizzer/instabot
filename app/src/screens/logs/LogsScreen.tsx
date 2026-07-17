@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { FlatList, StyleSheet, Text, View } from 'react-native';
+import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useTranslation } from 'react-i18next';
 import { Screen } from '../../components/Screen';
 import { Card } from '../../components/Card';
@@ -7,11 +8,25 @@ import { EmptyState } from '../../components/EmptyState';
 import { colors, spacing, typography } from '../../theme/theme';
 import { useAuth } from '../../store/AuthContext';
 import { subscribeToAutomationLogs } from '../../services/firestore';
-import { AutomationLog } from '../../types/models';
+import { AutomationLog, DmErrorCode } from '../../types/models';
 
 function formatTime(ms: number): string {
   return new Date(ms).toLocaleString('tr-TR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
 }
+
+const EVENT_TYPE_LABEL_KEYS: Record<AutomationLog['eventType'], string> = {
+  comment_match: 'logs.commentMatch',
+  button_click: 'logs.buttonClick',
+  mention_match: 'logs.mentionMatch',
+  reaction_match: 'logs.reactionMatch',
+};
+
+const DM_ERROR_LABEL_KEYS: Record<DmErrorCode, string> = {
+  outside_window: 'logs.dmErrorOutsideWindow',
+  recipient_unavailable: 'logs.dmErrorRecipientUnavailable',
+  rate_limited: 'logs.dmErrorRateLimited',
+  unknown: 'logs.dmErrorUnknown',
+};
 
 export function LogsScreen() {
   const { t } = useTranslation();
@@ -30,20 +45,26 @@ export function LogsScreen() {
         data={logs}
         keyExtractor={(item) => item.id}
         ListEmptyComponent={<EmptyState icon="📋" message={t('logs.emptyState')} />}
-        renderItem={({ item }) => (
-          <Card style={styles.logCard}>
-            <View style={styles.logHeaderRow}>
-              <Text style={styles.logType}>
-                {item.eventType === 'button_click' ? t('logs.buttonClick') : t('logs.commentMatch')}
+        renderItem={({ item, index }) => (
+          <Animated.View entering={FadeInDown.delay(Math.min(index, 8) * 60).springify()}>
+            <Card style={styles.logCard}>
+              <View style={styles.logHeaderRow}>
+                <Text style={styles.logType}>{t(EVENT_TYPE_LABEL_KEYS[item.eventType])}</Text>
+                <Text style={styles.logTime}>{formatTime(item.createdAt)}</Text>
+              </View>
+              {item.commentText ? <Text style={styles.logComment}>“{item.commentText}”</Text> : null}
+              <Text style={styles.logCommenter}>@{item.commenterUsername}</Text>
+              <Text style={item.dmSent ? styles.logSuccess : styles.logError}>
+                {item.dmSent
+                  ? t('logs.dmSent')
+                  : item.dmErrorCode
+                    ? t(DM_ERROR_LABEL_KEYS[item.dmErrorCode])
+                    : item.dmError
+                      ? t('logs.dmFailed')
+                      : ''}
               </Text>
-              <Text style={styles.logTime}>{formatTime(item.createdAt)}</Text>
-            </View>
-            {item.commentText ? <Text style={styles.logComment}>“{item.commentText}”</Text> : null}
-            <Text style={styles.logCommenter}>@{item.commenterUsername}</Text>
-            <Text style={item.dmSent ? styles.logSuccess : styles.logError}>
-              {item.dmSent ? t('logs.dmSent') : item.dmError ? t('logs.dmFailed') : ''}
-            </Text>
-          </Card>
+            </Card>
+          </Animated.View>
         )}
       />
     </Screen>

@@ -123,12 +123,47 @@ tamamlanmadan çalışmaz:
   `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID`'ye yaz. Değer boşsa Google butonu arayüzde
   hiç görünmez (bkz. `isGoogleSignInAvailable()`), hata fırlatmaz.
 - **Apple:** `expo-apple-authentication` kullanıyor. Apple Developer hesabında
-  "Sign in with Apple" capability'sini açman lazım (app.json'da
+  "Sign in with Apple" capability'sini açman lazım (`app.config.ts`'te
   `ios.usesAppleSignIn: true` zaten ayarlı, EAS Build bunu otomatik entitlement'a
   çevirir). Sadece iOS'ta ve gerçek cihazda/Apple hesabı bağlı simülatörde çalışır.
 
 Her ikisi de Expo Go'da DEĞİL, sadece bir **development build / EAS Build**'de
 çalışır (native modül içeriyorlar).
+
+## Facebook/Telefon ile giriş
+
+Kod tarafı tamamlandı (`app/src/services/socialAuth.ts`'te
+`signInWithFacebook`, `app/src/services/phoneAuth.ts`), ama ikisi de **dış
+kurulum** tamamlanmadan çalışmaz:
+
+- **Facebook:** `react-native-fbsdk-next` kullanıyor (`expo-auth-session`'ın
+  Facebook provider'ı deprecated). Aynı Meta App'i (Instagram Graph API
+  bağlama için zaten var olan, `EXPO_PUBLIC_META_APP_ID`) kullanır — ayrı bir
+  Facebook App gerekmiyor. Meta App Dashboard > Settings > Advanced >
+  Security'den **Client Token**'ı al, `app/.env` →
+  `EXPO_PUBLIC_META_CLIENT_TOKEN`'a yaz; ayrıca aynı app'e **Facebook Login**
+  ürününü ekleyip Firebase Console > Authentication > Sign-in method >
+  Facebook'u Meta App ID + Secret ile aç. Değer boşsa Facebook butonu
+  arayüzde hiç görünmez (bkz. `isFacebookSignInAvailable()`).
+- **Telefon/OTP:** Native Firebase Phone Auth kullanıyor
+  (`@react-native-firebase/auth`) — Twilio/Netgsm gibi SMS sağlayıcıları
+  değil, çünkü onlar SMS başına ücretlendiriyor, native Firebase Phone Auth
+  Google'ın karşıladığı makul kullanım kotası dahilinde ücretsiz. Bu, mevcut
+  `firebase/auth` JS SDK'nın yanına ikinci bir native Firebase Auth sistemi
+  eklemek demek — `phoneAuth.ts`'teki köprüleme deseni (RNFirebase ile
+  doğrula → `mintCustomTokenForPhoneAuth` Cloud Function'ı ile custom token
+  üret → JS SDK'da `signInWithCustomToken`) **bozulmadan korunmalı**, aksi
+  halde iki ayrı oturum sistemi senkronsuz kalır. Firebase Console'da
+  Authentication > Sign-in method > Phone'u aç, Android için SHA-1/SHA-256
+  fingerprint ekle, iOS için APNs Authentication Key yükle, Google Cloud
+  Console'da Play Integrity API'yi etkinleştir.
+
+Üçü de (Google/Apple/Facebook/Telefon) Expo Go'da DEĞİL, sadece bir
+**development build / EAS Build**'de çalışır (native modül içeriyorlar) —
+Facebook/Telefon eklendiğinde mevcut dev-client build'i geçersiz kalır,
+`google-services.json`/`GoogleService-Info.plist` Firebase Console'dan
+indirilip `app/`'e konduktan sonra yeni bir `eas build --profile
+development` gerekir.
 
 ## Henüz yapılmayanlar (bilerek MVP dışında bırakıldı)
 

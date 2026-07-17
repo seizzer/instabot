@@ -7,24 +7,26 @@ import { Button } from '../../components/Button';
 import { TextField } from '../../components/TextField';
 import { colors, spacing, typography } from '../../theme/theme';
 import { useAuth } from '../../store/AuthContext';
+import { subscribeToIgAccounts, deleteRule, getRule } from '../../services/firestore';
 import {
-  subscribeToIgAccounts,
-  createRule,
-  updateRule,
-  deleteRule,
-  getRule,
-  markFreePostUsed,
-} from '../../services/firestore';
-import { createEmptyDmFlow, DmFlow, IgAccount, Rule, RuleTargetScope } from '../../types/models';
+  createEmptyDmFlow,
+  createEmptyRuleStats,
+  DmFlow,
+  IgAccount,
+  Rule,
+  RuleTargetScope,
+} from '../../types/models';
 import { RulesStackParamList } from '../../navigation/types';
 import { SelectPostStep } from './flowBuilder/SelectPostStep';
 import { KeywordStep } from './flowBuilder/KeywordStep';
 import { PublicReplyStep } from './flowBuilder/PublicReplyStep';
 import { DmFlowStep } from './flowBuilder/DmFlowStep';
+import { ABTestStep } from './flowBuilder/ABTestStep';
+import { saveRuleWithFreemiumGate } from './ruleSaveHelpers';
 
 type Props = NativeStackScreenProps<RulesStackParamList, 'RuleWizard'>;
 
-const TOTAL_STEPS = 4;
+const TOTAL_STEPS = 5;
 
 export function RuleWizardScreen({ navigation, route }: Props) {
   const { t } = useTranslation();
@@ -40,6 +42,9 @@ export function RuleWizardScreen({ navigation, route }: Props) {
   const [publicReplyEnabled, setPublicReplyEnabled] = useState(true);
   const [publicReplyText, setPublicReplyText] = useState('');
   const [dmFlow, setDmFlow] = useState<DmFlow>(createEmptyDmFlow());
+  const [abTestEnabled, setAbTestEnabled] = useState(false);
+  const [variantBPublicReplyText, setVariantBPublicReplyText] = useState('');
+  const [variantBDmFlow, setVariantBDmFlow] = useState<DmFlow>(createEmptyDmFlow());
   const [existingPriority, setExistingPriority] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -65,6 +70,9 @@ export function RuleWizardScreen({ navigation, route }: Props) {
       setPublicReplyEnabled(rule.publicReplyEnabled);
       setPublicReplyText(rule.publicReplyText);
       setDmFlow(rule.dmFlow);
+      setAbTestEnabled(!!rule.variantB);
+      setVariantBPublicReplyText(rule.variantB?.publicReplyText ?? '');
+      setVariantBDmFlow(rule.variantB?.dmFlow ?? createEmptyDmFlow());
       setExistingPriority(rule.priority);
       setLoadingRule(false);
     });
@@ -74,12 +82,6 @@ export function RuleWizardScreen({ navigation, route }: Props) {
 
   const handleSave = async () => {
     if (!user || !activeIgAccount) return;
-
-    // Freemium gate: first automated post is free, everything after requires Pro.
-    if (!editingRuleId && subscription?.tier !== 'pro' && subscription?.freePostUsed) {
-      navigation.navigate('Paywall');
-      return;
-    }
 
     setSaving(true);
     try {
@@ -92,24 +94,32 @@ export function RuleWizardScreen({ navigation, route }: Props) {
         triggerType: 'keyword',
         aiIntentTags: [],
         keywords,
+        reactionFilter: null,
         publicReplyEnabled,
         publicReplyText,
         dmEnabled: true,
         dmFlow,
+        variantB: abTestEnabled
+          ? { publicReplyText: variantBPublicReplyText, dmFlow: variantBDmFlow }
+          : null,
         // A monotonically increasing value keeps newer rules evaluated after
         // older ones without needing a separate "count existing rules" query.
         priority: existingPriority ?? Date.now(),
         status: 'active',
-        stats: { commentsMatched: 0, dmsSent: 0, dmsFailed: 0, buttonClicks: 0 },
+        stats: createEmptyRuleStats(),
+        statsB: createEmptyRuleStats(),
       };
 
-      if (editingRuleId) {
-        await updateRule(editingRuleId, payload);
-      } else {
-        await createRule(payload);
-        if (subscription?.tier !== 'pro' && !subscription?.freePostUsed) {
-          await markFreePostUsed(user.uid);
-        }
+      const result = await saveRuleWithFreemiumGate({
+        editingRuleId,
+        userUid: user.uid,
+        subscriptionTier: subscription?.tier,
+        freePostUsed: subscription?.freePostUsed,
+        payload,
+      });
+      if (result === 'paywall') {
+        navigation.navigate('Paywall');
+        return;
       }
       navigation.goBack();
     } catch (error: any) {
@@ -206,6 +216,17 @@ export function RuleWizardScreen({ navigation, route }: Props) {
       )}
 
       {step === 3 && <DmFlowStep dmFlow={dmFlow} onChange={setDmFlow} />}
+
+      {step === 4 && (
+        <ABTestStep
+          enabled={abTestEnabled}
+          publicReplyText={variantBPublicReplyText}
+          dmFlow={variantBDmFlow}
+          onChangeEnabled={setAbTestEnabled}
+          onChangePublicReplyText={setVariantBPublicReplyText}
+          onChangeDmFlow={setVariantBDmFlow}
+        />
+      )}
 
       <View style={styles.footer}>
         <Button label={t('common.back')} variant="ghost" onPress={goBack} style={styles.footerButton} />

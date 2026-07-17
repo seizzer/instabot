@@ -30,8 +30,11 @@ export async function connectInstagramAccount(): Promise<InstagramAuthResult> {
     throw new Error('EXPO_PUBLIC_META_APP_ID is not set — see .env.example');
   }
 
+  // Empty string (unset in .env) must also fall through — `??` only catches
+  // null/undefined, and an empty EXPO_PUBLIC_META_OAUTH_REDIRECT_URI= line
+  // resolves to "" at runtime, not undefined.
   const redirectUri =
-    process.env.EXPO_PUBLIC_META_OAUTH_REDIRECT_URI ??
+    process.env.EXPO_PUBLIC_META_OAUTH_REDIRECT_URI ||
     AuthSession.makeRedirectUri({ scheme: 'instabot' });
 
   const request = new AuthSession.AuthRequest({

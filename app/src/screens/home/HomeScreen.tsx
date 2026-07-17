@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
+import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useTranslation } from 'react-i18next';
 import { useNavigation } from '@react-navigation/native';
 import { Screen } from '../../components/Screen';
@@ -64,18 +65,24 @@ export function HomeScreen() {
       ) : null}
 
       <View style={styles.statsRow}>
-        <Card style={styles.statCard}>
-          <Text style={styles.statValue}>{todaysComments}</Text>
-          <Text style={styles.statLabel}>{t('home.todayComments')}</Text>
-        </Card>
-        <Card style={styles.statCard}>
-          <Text style={styles.statValue}>{todaysDms}</Text>
-          <Text style={styles.statLabel}>{t('home.dmsSent')}</Text>
-        </Card>
-        <Card style={styles.statCard}>
-          <Text style={styles.statValue}>{activeRulesCount}</Text>
-          <Text style={styles.statLabel}>{t('home.activeRules')}</Text>
-        </Card>
+        <Animated.View style={styles.statCardWrap} entering={FadeInDown.delay(0).springify()}>
+          <Card style={styles.statCard}>
+            <Text style={styles.statValue}>{todaysComments}</Text>
+            <Text style={styles.statLabel}>{t('home.todayComments')}</Text>
+          </Card>
+        </Animated.View>
+        <Animated.View style={styles.statCardWrap} entering={FadeInDown.delay(80).springify()}>
+          <Card style={styles.statCard}>
+            <Text style={styles.statValue}>{todaysDms}</Text>
+            <Text style={styles.statLabel}>{t('home.dmsSent')}</Text>
+          </Card>
+        </Animated.View>
+        <Animated.View style={styles.statCardWrap} entering={FadeInDown.delay(160).springify()}>
+          <Card style={styles.statCard}>
+            <Text style={styles.statValue}>{activeRulesCount}</Text>
+            <Text style={styles.statLabel}>{t('home.activeRules')}</Text>
+          </Card>
+        </Animated.View>
       </View>
 
       <Button
@@ -94,7 +101,8 @@ const styles = StyleSheet.create({
   warningCard: { backgroundColor: '#FFF3E0', borderColor: colors.warning, marginBottom: spacing.md },
   warningText: { ...typography.body, color: '#8A5A00' },
   statsRow: { flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.lg },
-  statCard: { flex: 1, alignItems: 'center' },
+  statCardWrap: { flex: 1 },
+  statCard: { alignItems: 'center' },
   statValue: { ...typography.h2, color: colors.primary },
   statLabel: { ...typography.caption, color: colors.textMuted, textAlign: 'center', marginTop: spacing.xs },
   newRuleButton: { marginBottom: spacing.md },
