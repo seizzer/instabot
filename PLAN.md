@@ -267,10 +267,10 @@ Meta Developer panelinde elle yapmanız gereken adımlar ayrı bir **META_SETUP.
 
 **Dışında (sonraki fazlara ertelendi):**
 - AI destekli niyet anlama modu
-- Sektöre özel hazır şablon paketleri
 - Çoklu hesap / ajans modu
 - Analytics / dönüşüm huni raporları
-- Story mention otomasyonu
+- Story mention/reply otomasyonu (ManyChat'in tekil influencer'lara sunduğu, bizde henüz olmayan bir özellik)
+- Yeni takipçi karşılama DM'i (ManyChat'in tekil influencer'lara sunduğu, bizde henüz olmayan bir özellik)
 
 ---
 
@@ -278,7 +278,9 @@ Meta Developer panelinde elle yapmanız gereken adımlar ayrı bir **META_SETUP.
 
 **ManyChat / Chatfuel'in boşlukları:** masaüstü-öncelikli akış (flow) canvas'ı teknik bilgisi olmayan küçük işletme sahibi için karmaşık; jargon ağır ("flow", "trigger", "node"); TR yerelleştirme zayıf; contact-based fiyatlandırma küçük işletmeler için öngörülemez; mobil deneyim ikincil (responsive web, native app değil).
 
-**Bizim farkımız:** native mobil-first uygulama, jargonsuz 3 dokunuşluk kural kurulumu, **DM içine gömülü buton/dallanma/dosya gönderme akışını basit bir sihirbazla sunma** (rakiplerin karmaşık canvas'ı yerine), TR öncelikli, sektöre özel hazır şablonlar, basit sabit fiyatlı freemium.
+**Bizim farkımız:** native mobil-first uygulama, jargonsuz 3 dokunuşluk kural kurulumu, **DM içine gömülü buton/dallanma/dosya gönderme akışını basit bir sihirbazla sunma** (rakiplerin karmaşık canvas'ı yerine), TR öncelikli, basit sabit fiyatlı freemium.
+
+**Not (2026-07-20):** Sektöre özel hazır şablon kütüphanesi bilinçli olarak kapsam dışı bırakıldı — hedef kitle işletmeler değil tekil kullanıcılar (influencer'lar), sektörel şablonların bu kitle için değeri düşük.
 
 ### MVP (v1.0)
 Yukarıdaki "MVP Kapsamı" bölümü.

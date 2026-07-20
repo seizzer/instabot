@@ -52,7 +52,13 @@ export function SimpleTriggerRuleScreen({ navigation, route }: Props) {
   }, [editingRuleId]);
 
   const activeIgAccount = igAccounts[0] ?? null;
-  const title = triggerType === 'mention' ? t('rules.mentionRuleTitle') : t('rules.reactionRuleTitle');
+  const TITLES: Record<typeof triggerType, string> = {
+    mention: t('rules.mentionRuleTitle'),
+    reaction: t('rules.reactionRuleTitle'),
+    story_mention: t('rules.storyMentionRuleTitle'),
+    story_reply: t('rules.storyReplyRuleTitle'),
+  };
+  const title = TITLES[triggerType];
 
   const handleSave = async () => {
     if (!user || !activeIgAccount) return;

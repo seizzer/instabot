@@ -54,7 +54,13 @@ export interface DmFlow {
   nodes: Record<string, DmFlowNode>;
 }
 
-export type RuleTriggerType = 'keyword' | 'ai_intent' | 'mention' | 'reaction';
+export type RuleTriggerType =
+  | 'keyword'
+  | 'ai_intent'
+  | 'mention'
+  | 'reaction'
+  | 'story_mention'
+  | 'story_reply';
 export type RuleStatus = 'active' | 'paused';
 export type RuleTargetScope = 'all_posts' | 'specific_posts';
 
@@ -103,7 +109,9 @@ export type AutomationEventType =
   | 'comment_match'
   | 'button_click'
   | 'mention_match'
-  | 'reaction_match';
+  | 'reaction_match'
+  | 'story_mention_match'
+  | 'story_reply_match';
 
 export interface AutomationLog {
   id: string;
@@ -115,7 +123,7 @@ export interface AutomationLog {
   commenterIgId: string | null;
   commenterUsername: string;
   eventType: AutomationEventType;
-  matchedTrigger: 'keyword' | 'ai' | 'mention' | 'reaction';
+  matchedTrigger: 'keyword' | 'ai' | 'mention' | 'reaction' | 'story_mention' | 'story_reply';
   matchedValue: string;
   publicReplySent: boolean;
   dmSent: boolean;

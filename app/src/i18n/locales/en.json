@@ -139,15 +139,17 @@
     "typeMentionDesc": "Send an automatic DM when someone tags you in a comment",
     "typeReaction": "Message reaction",
     "typeReactionDesc": "Send a follow-up when someone reacts to a DM you sent",
+    "typeStoryMention": "Story mention",
+    "typeStoryMentionDesc": "Send an automatic DM when someone tags you in their Story",
+    "typeStoryReply": "Story reply",
+    "typeStoryReplyDesc": "Send an automatic DM when someone replies to your Story",
     "anyReaction": "Any reaction",
     "reactionFilterLabel": "Which reaction? (optional)",
     "reactionFilterPlaceholder": "Leave empty = any reaction",
     "mentionRuleTitle": "Mention rule",
-    "reactionRuleTitle": "Message reaction rule"
-  },
-  "templates": {
-    "title": "Templates",
-    "comingSoon": "Industry-ready templates coming soon"
+    "reactionRuleTitle": "Message reaction rule",
+    "storyMentionRuleTitle": "Story mention rule",
+    "storyReplyRuleTitle": "Story reply rule"
   },
   "logs": {
     "title": "Activity",
@@ -156,6 +158,8 @@
     "buttonClick": "Button clicked",
     "mentionMatch": "Mention",
     "reactionMatch": "Message reaction",
+    "storyMentionMatch": "Story mention",
+    "storyReplyMatch": "Story reply",
     "dmSent": "DM sent",
     "dmFailed": "DM failed"
   },
@@ -230,7 +234,6 @@
     "featureFixedPrice": "Fixed price — never goes up as your contacts or messages grow",
     "featureUnlimitedRules": "Unlimited rules and posts",
     "featureAiMode": "AI-powered smart replies",
-    "featureTemplates": "Ready-made industry templates",
     "subscribeButton": "Subscribe",
     "restoreButton": "Restore purchases"
   }

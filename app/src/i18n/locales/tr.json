@@ -139,15 +139,17 @@
     "typeMentionDesc": "Biri seni bir yorumda etiketlediğinde otomatik DM gönder",
     "typeReaction": "Mesaj tepkisi",
     "typeReactionDesc": "Gönderdiğin bir DM'e emoji tepkisi verilince takip mesajı gönder",
+    "typeStoryMention": "Hikayede etiketlenme",
+    "typeStoryMentionDesc": "Biri seni kendi hikayesinde etiketlediğinde otomatik DM gönder",
+    "typeStoryReply": "Hikaye yanıtı",
+    "typeStoryReplyDesc": "Biri senin hikayene yanıt verdiğinde otomatik DM gönder",
     "anyReaction": "Herhangi bir tepki",
     "reactionFilterLabel": "Hangi tepki? (opsiyonel)",
     "reactionFilterPlaceholder": "Boş bırak = herhangi bir tepki",
     "mentionRuleTitle": "Etiketlenme kuralı",
-    "reactionRuleTitle": "Mesaj tepkisi kuralı"
-  },
-  "templates": {
-    "title": "Şablonlar",
-    "comingSoon": "Sektörel hazır şablonlar yakında burada"
+    "reactionRuleTitle": "Mesaj tepkisi kuralı",
+    "storyMentionRuleTitle": "Hikayede etiketlenme kuralı",
+    "storyReplyRuleTitle": "Hikaye yanıtı kuralı"
   },
   "logs": {
     "title": "Kayıtlar",
@@ -156,6 +158,8 @@
     "buttonClick": "Butona tıklandı",
     "mentionMatch": "Etiketlenme",
     "reactionMatch": "Mesaj tepkisi",
+    "storyMentionMatch": "Hikayede etiketlenme",
+    "storyReplyMatch": "Hikaye yanıtı",
     "dmSent": "DM gönderildi",
     "dmFailed": "DM gönderilemedi"
   },
@@ -229,7 +233,6 @@
     "featureFixedPrice": "Sabit fiyat — kontak/mesaj sayısı arttıkça fiyat artmaz",
     "featureUnlimitedRules": "Sınırsız kural ve gönderi",
     "featureAiMode": "AI destekli akıllı cevaplar",
-    "featureTemplates": "Sektörel hazır şablonlar",
     "subscribeButton": "Abone ol",
     "restoreButton": "Satın alımları geri yükle"
   }

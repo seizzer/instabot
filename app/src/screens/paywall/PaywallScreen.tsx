@@ -16,7 +16,6 @@ const FEATURE_KEYS = [
   'paywall.featureFixedPrice',
   'paywall.featureUnlimitedRules',
   'paywall.featureAiMode',
-  'paywall.featureTemplates',
 ] as const;
 
 export function PaywallScreen({ navigation }: Props) {

@@ -19,6 +19,8 @@ const EVENT_TYPE_LABEL_KEYS: Record<AutomationLog['eventType'], string> = {
   button_click: 'logs.buttonClick',
   mention_match: 'logs.mentionMatch',
   reaction_match: 'logs.reactionMatch',
+  story_mention_match: 'logs.storyMentionMatch',
+  story_reply_match: 'logs.storyReplyMatch',
 };
 
 const DM_ERROR_LABEL_KEYS: Record<DmErrorCode, string> = {

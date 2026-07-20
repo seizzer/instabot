@@ -15,7 +15,6 @@ export type MainTabParamList = {
   HomeTab: undefined;
   RulesTab: undefined;
   InboxTab: undefined;
-  TemplatesTab: undefined;
   LogsTab: undefined;
   SettingsTab: undefined;
 };
@@ -24,7 +23,10 @@ export type RulesStackParamList = {
   RulesList: undefined;
   NewRuleType: undefined;
   RuleWizard: { ruleId?: string };
-  SimpleTriggerRule: { triggerType: 'mention' | 'reaction'; ruleId?: string };
+  SimpleTriggerRule: {
+    triggerType: 'mention' | 'reaction' | 'story_mention' | 'story_reply';
+    ruleId?: string;
+  };
   Paywall: undefined;
 };
 

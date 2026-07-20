@@ -32,7 +32,13 @@ export interface DmFlow {
   nodes: Record<string, DmFlowNode>;
 }
 
-export type RuleTriggerType = 'keyword' | 'ai_intent' | 'mention' | 'reaction';
+export type RuleTriggerType =
+  | 'keyword'
+  | 'ai_intent'
+  | 'mention'
+  | 'reaction'
+  | 'story_mention'
+  | 'story_reply';
 export type RuleStatus = 'active' | 'paused';
 export type RuleTargetScope = 'all_posts' | 'specific_posts';
 

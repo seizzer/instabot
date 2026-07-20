@@ -40,7 +40,17 @@ interface MessagingEvent {
   reaction?: { mid: string; action: 'react' | 'unreact'; reaction?: string; emoji?: string };
   referral?: { ref?: string; source?: string; type?: string };
   read?: { mid?: string };
-  message?: { mid: string; text?: string; is_echo?: boolean };
+  message?: {
+    mid: string;
+    text?: string;
+    is_echo?: boolean;
+    // Story mentions arrive as an attachment (no text) — a CDN url to the
+    // story frame, never the commenter's own message content.
+    attachments?: { type: string; payload?: { url?: string } }[];
+    // Story replies arrive as a normal message with `text` PLUS this,
+    // identifying which story was replied to.
+    reply_to?: { story?: { url?: string; id?: string } };
+  };
 }
 
 export const processWebhookEvent = onDocumentCreated(
@@ -73,6 +83,10 @@ export const processWebhookEvent = onDocumentCreated(
           await handleReferralEvent(entry.id, messagingEvent);
         } else if (messagingEvent.read) {
           await handleSeenEvent(entry.id, messagingEvent);
+        } else if (messagingEvent.message?.attachments?.some((a) => a.type === 'story_mention')) {
+          await handleStoryMentionEvent(entry.id, messagingEvent);
+        } else if (messagingEvent.message?.reply_to?.story) {
+          await handleStoryReplyEvent(entry.id, messagingEvent);
         } else if (messagingEvent.message) {
           await handleMessageEvent(entry.id, messagingEvent);
         }
@@ -405,6 +419,156 @@ async function handleReactionEvent(igBusinessAccountId: string, messagingEvent: 
     eventType: 'reaction_match',
     matchedTrigger: 'reaction',
     matchedValue: emoji ?? 'any',
+    publicReplySent: false,
+    dmSent,
+    buttonClicked: null,
+    dmError,
+    dmErrorCode,
+    aiIntent: null,
+    aiConfidence: null,
+  });
+
+  if (dmSent) await incrementRuleStats(rule.id, 'stats.dmsSent');
+  if (dmError) await incrementRuleStats(rule.id, 'stats.dmsFailed');
+}
+
+// Someone tagged the account in their own Story — arrives with no text, only
+// a CDN attachment. Unlike the comment-based 'mention' trigger, we get the
+// commenter's numeric IG id here, so a real conversation can be opened.
+async function handleStoryMentionEvent(igBusinessAccountId: string, messagingEvent: MessagingEvent) {
+  const igAccount = await getIgAccountByIgUserId(igBusinessAccountId);
+  if (!igAccount || igAccount.status !== 'active') return;
+
+  const rules = await getActiveRulesForAccount(igAccount.id);
+  const rule = rules.find((r) => r.triggerType === 'story_mention');
+  if (!rule || !rule.dmEnabled) return;
+
+  const accessToken = await getAccessToken(igAccount.id);
+  if (!accessToken) return;
+
+  const commenterIgId = messagingEvent.sender.id;
+  let username = '';
+  try {
+    username = await getInstagramUsername(commenterIgId, accessToken);
+  } catch {
+    // Username is a nice-to-have for display — sending still works with an empty one.
+  }
+
+  const conversationId = `${igAccount.id}_${commenterIgId}`;
+  let dmSent = false;
+  let dmError: string | null = null;
+  let dmErrorCode: string | null = null;
+  const startNode = rule.dmFlow.nodes[rule.dmFlow.startNodeId];
+  try {
+    await sendFlowNode({
+      igUserId: igBusinessAccountId,
+      accessToken,
+      node: startNode,
+      username,
+      recipientUserId: commenterIgId,
+      conversationId,
+    });
+    dmSent = true;
+    await upsertConversation({
+      igAccountId: igAccount.id,
+      ownerUid: igAccount.ownerUid,
+      ruleId: rule.id,
+      commenterIgId,
+      commenterUsername: username,
+      currentNodeId: startNode.id,
+      status: nodeHasFurtherReply(startNode) ? 'active' : 'completed',
+    });
+  } catch (err: any) {
+    dmError = err?.message ?? 'DM_SEND_FAILED';
+    dmErrorCode = classifyDmError(dmError!);
+  }
+
+  await logAutomationEvent({
+    ownerUid: igAccount.ownerUid,
+    igAccountId: igAccount.id,
+    ruleId: rule.id,
+    commentId: null,
+    commentText: null,
+    commenterIgId,
+    commenterUsername: username,
+    eventType: 'story_mention_match',
+    matchedTrigger: 'story_mention',
+    matchedValue: 'story_mention',
+    publicReplySent: false,
+    dmSent,
+    buttonClicked: null,
+    dmError,
+    dmErrorCode,
+    aiIntent: null,
+    aiConfidence: null,
+  });
+
+  if (dmSent) await incrementRuleStats(rule.id, 'stats.dmsSent');
+  if (dmError) await incrementRuleStats(rule.id, 'stats.dmsFailed');
+}
+
+// Someone replied to the account's own Story — arrives as a normal message
+// with `text` plus `reply_to.story` identifying which story.
+async function handleStoryReplyEvent(igBusinessAccountId: string, messagingEvent: MessagingEvent) {
+  const igAccount = await getIgAccountByIgUserId(igBusinessAccountId);
+  if (!igAccount || igAccount.status !== 'active') return;
+
+  const rules = await getActiveRulesForAccount(igAccount.id);
+  const rule = rules.find((r) => r.triggerType === 'story_reply');
+  if (!rule || !rule.dmEnabled) return;
+
+  const accessToken = await getAccessToken(igAccount.id);
+  if (!accessToken) return;
+
+  const commenterIgId = messagingEvent.sender.id;
+  const replyText = messagingEvent.message?.text ?? '';
+  let username = '';
+  try {
+    username = await getInstagramUsername(commenterIgId, accessToken);
+  } catch {
+    // Username is a nice-to-have for display — sending still works with an empty one.
+  }
+
+  const conversationId = `${igAccount.id}_${commenterIgId}`;
+  let dmSent = false;
+  let dmError: string | null = null;
+  let dmErrorCode: string | null = null;
+  const startNode = rule.dmFlow.nodes[rule.dmFlow.startNodeId];
+  try {
+    await sendFlowNode({
+      igUserId: igBusinessAccountId,
+      accessToken,
+      node: startNode,
+      username,
+      recipientUserId: commenterIgId,
+      conversationId,
+    });
+    dmSent = true;
+    await upsertConversation({
+      igAccountId: igAccount.id,
+      ownerUid: igAccount.ownerUid,
+      ruleId: rule.id,
+      commenterIgId,
+      commenterUsername: username,
+      currentNodeId: startNode.id,
+      status: nodeHasFurtherReply(startNode) ? 'active' : 'completed',
+    });
+  } catch (err: any) {
+    dmError = err?.message ?? 'DM_SEND_FAILED';
+    dmErrorCode = classifyDmError(dmError!);
+  }
+
+  await logAutomationEvent({
+    ownerUid: igAccount.ownerUid,
+    igAccountId: igAccount.id,
+    ruleId: rule.id,
+    commentId: null,
+    commentText: replyText || null,
+    commenterIgId,
+    commenterUsername: username,
+    eventType: 'story_reply_match',
+    matchedTrigger: 'story_reply',
+    matchedValue: replyText || 'story_reply',
     publicReplySent: false,
     dmSent,
     buttonClicked: null,

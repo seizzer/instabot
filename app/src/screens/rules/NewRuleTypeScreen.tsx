@@ -40,6 +40,24 @@ export function NewRuleTypeScreen({ navigation }: Props) {
           <Text style={styles.optionDesc}>{t('rules.typeReactionDesc')}</Text>
         </Card>
       </Pressable>
+
+      <Pressable
+        onPress={() => navigation.navigate('SimpleTriggerRule', { triggerType: 'story_mention' })}
+      >
+        <Card style={styles.optionCard}>
+          <Text style={styles.optionTitle}>{t('rules.typeStoryMention')}</Text>
+          <Text style={styles.optionDesc}>{t('rules.typeStoryMentionDesc')}</Text>
+        </Card>
+      </Pressable>
+
+      <Pressable
+        onPress={() => navigation.navigate('SimpleTriggerRule', { triggerType: 'story_reply' })}
+      >
+        <Card style={styles.optionCard}>
+          <Text style={styles.optionTitle}>{t('rules.typeStoryReply')}</Text>
+          <Text style={styles.optionDesc}>{t('rules.typeStoryReplyDesc')}</Text>
+        </Card>
+      </Pressable>
     </Screen>
   );
 }
