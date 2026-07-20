@@ -58,10 +58,18 @@ export interface RuleVariant {
   dmFlow: DmFlow;
 }
 
+// 'instagram' rules key off igAccountId (also covers Messenger — see
+// getIgAccountByPlatformId, same connected account, no separate field
+// needed). 'whatsapp' rules key off whatsAppAccountId instead — a WhatsApp
+// number is a wholly separate connected channel, not tied to an IG account.
+export type RulePlatform = 'instagram' | 'whatsapp';
+
 export interface Rule {
   id: string;
   ownerUid: string;
   igAccountId: string;
+  platform: RulePlatform;
+  whatsAppAccountId: string | null;
   name: string;
   targetScope: RuleTargetScope;
   targetPostIds: string[];
@@ -81,6 +89,18 @@ export interface Rule {
 }
 
 export type IgAccountStatus = 'active' | 'token_expired' | 'revoked';
+
+export type WhatsAppAccountStatus = 'active' | 'token_expired' | 'revoked';
+
+export interface WhatsAppAccount {
+  id: string;
+  ownerUid: string;
+  phoneNumberId: string;
+  wabaId: string;
+  displayPhoneNumber: string;
+  verifiedName: string;
+  status: WhatsAppAccountStatus;
+}
 
 export interface IgAccount {
   id: string;

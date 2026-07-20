@@ -6,6 +6,7 @@ import { RulesListScreen } from '../screens/rules/RulesListScreen';
 import { NewRuleTypeScreen } from '../screens/rules/NewRuleTypeScreen';
 import { RuleWizardScreen } from '../screens/rules/RuleWizardScreen';
 import { SimpleTriggerRuleScreen } from '../screens/rules/SimpleTriggerRuleScreen';
+import { WhatsAppRuleScreen } from '../screens/rules/WhatsAppRuleScreen';
 import { PaywallScreen } from '../screens/paywall/PaywallScreen';
 import { colors } from '../theme/theme';
 
@@ -31,6 +32,13 @@ export function RulesNavigator() {
       <Stack.Screen
         name="SimpleTriggerRule"
         component={SimpleTriggerRuleScreen}
+        options={({ route }) => ({
+          title: route.params?.ruleId ? t('rules.editRule') : t('rules.newRule'),
+        })}
+      />
+      <Stack.Screen
+        name="WhatsAppRule"
+        component={WhatsAppRuleScreen}
         options={({ route }) => ({
           title: route.params?.ruleId ? t('rules.editRule') : t('rules.newRule'),
         })}

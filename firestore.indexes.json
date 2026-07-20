@@ -73,6 +73,15 @@
         { "fieldPath": "status", "order": "ASCENDING" },
         { "fieldPath": "tokenExpiresAt", "order": "ASCENDING" }
       ]
+    },
+    {
+      "collectionGroup": "rules",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "whatsAppAccountId", "order": "ASCENDING" },
+        { "fieldPath": "status", "order": "ASCENDING" },
+        { "fieldPath": "priority", "order": "ASCENDING" }
+      ]
     }
   ],
   "fieldOverrides": []

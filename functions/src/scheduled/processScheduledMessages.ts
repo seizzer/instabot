@@ -1,6 +1,12 @@
 import { onSchedule } from 'firebase-functions/v2/scheduler';
 import { REGION, db } from '../lib/admin';
-import { getAccessToken, logAutomationEvent, sendFlowNode } from '../lib/dmFlowRuntime';
+import {
+  getAccessToken,
+  getWhatsAppAccessToken,
+  logAutomationEvent,
+  sendFlowNode,
+  sendWhatsAppFlowNode,
+} from '../lib/dmFlowRuntime';
 import { Rule } from '../lib/types';
 
 // Drip/follow-up steps queued by processWebhookEvent's 'delayed_reply'
@@ -33,17 +39,36 @@ export const processScheduledMessages = onSchedule(
           continue;
         }
 
-        const accessToken = await getAccessToken(data.igAccountId);
+        // rule.platform decides both which secrets collection to read the
+        // token from and which Graph API shape to send with — igAccountId
+        // holds the whatsAppAccounts doc id for WhatsApp-owned rules (see
+        // handleWhatsAppButtonReply, which reuses this field rather than
+        // adding a parallel schema just for this channel).
+        const isWhatsApp = rule.platform === 'whatsapp';
+        const accessToken = isWhatsApp
+          ? await getWhatsAppAccessToken(data.igAccountId)
+          : await getAccessToken(data.igAccountId);
         if (!accessToken) continue; // retry next run once reconnected
 
-        await sendFlowNode({
-          igUserId: data.igUserId,
-          accessToken,
-          node,
-          username: data.commenterUsername,
-          recipientUserId: data.commenterIgId,
-          conversationId: data.conversationId,
-        });
+        if (isWhatsApp) {
+          await sendWhatsAppFlowNode({
+            phoneNumberId: data.igUserId,
+            accessToken,
+            node,
+            username: data.commenterUsername,
+            recipientWaId: data.commenterIgId,
+            conversationId: data.conversationId,
+          });
+        } else {
+          await sendFlowNode({
+            igUserId: data.igUserId,
+            accessToken,
+            node,
+            username: data.commenterUsername,
+            recipientUserId: data.commenterIgId,
+            conversationId: data.conversationId,
+          });
+        }
 
         await logAutomationEvent({
           ownerUid: data.ownerUid,

@@ -218,3 +218,76 @@ export async function sendDirectMessage(params: SendMessageParams) {
     );
   }
 }
+
+// ---- WhatsApp Cloud API ----
+// Uses the same graph.facebook.com surface as Instagram/Messenger, but a
+// completely different message shape (no comment_id concept — WhatsApp has
+// no posts/comments, only 1:1 messages) and its own permanent access token
+// (a System User token from Meta Business Manager, not an OAuth user token).
+
+export async function getWhatsAppPhoneNumberInfo(phoneNumberId: string, accessToken: string) {
+  return graphRequest<{ display_phone_number: string; verified_name: string }>(
+    `/${phoneNumberId}`,
+    { access_token: accessToken, fields: 'display_phone_number,verified_name' }
+  );
+}
+
+function toWhatsAppButtons(buttons: DmFlowButton[]) {
+  // WhatsApp interactive reply buttons: max 3, and each title is capped at
+  // 20 characters by Meta — longer labels get silently rejected by the API,
+  // so we truncate here rather than let the send fail.
+  return buttons.slice(0, 3).map((button) => ({
+    type: 'reply' as const,
+    reply: { id: button.id, title: button.label.slice(0, 20) },
+  }));
+}
+
+interface SendWhatsAppMessageParams {
+  phoneNumberId: string;
+  accessToken: string;
+  recipientWaId: string;
+  text: string;
+  buttons?: DmFlowButton[];
+  mediaUrl?: string | null;
+}
+
+export async function sendWhatsAppMessage(params: SendWhatsAppMessageParams) {
+  const hasButtons = params.buttons && params.buttons.length > 0;
+  const message = hasButtons
+    ? {
+        messaging_product: 'whatsapp',
+        to: params.recipientWaId,
+        type: 'interactive',
+        interactive: {
+          type: 'button',
+          body: { text: params.text },
+          action: { buttons: toWhatsAppButtons(params.buttons!) },
+        },
+      }
+    : {
+        messaging_product: 'whatsapp',
+        to: params.recipientWaId,
+        type: 'text',
+        text: { body: params.text },
+      };
+
+  await graphRequest(
+    `/${params.phoneNumberId}/messages`,
+    { access_token: params.accessToken, ...(message as any) },
+    'POST'
+  );
+
+  if (params.mediaUrl) {
+    await graphRequest(
+      `/${params.phoneNumberId}/messages`,
+      {
+        access_token: params.accessToken,
+        messaging_product: 'whatsapp' as any,
+        to: params.recipientWaId as any,
+        type: 'image' as any,
+        image: { link: params.mediaUrl } as any,
+      },
+      'POST'
+    );
+  }
+}

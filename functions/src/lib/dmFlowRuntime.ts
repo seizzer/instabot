@@ -1,8 +1,8 @@
 import { FieldValue } from 'firebase-admin/firestore';
 import { db } from './admin';
 import { findMatchingKeyword } from './textMatch';
-import { sendDirectMessage } from './graphApi';
-import { DmFlowNode, IgAccount, Rule } from './types';
+import { sendDirectMessage, sendWhatsAppMessage } from './graphApi';
+import { DmFlowNode, IgAccount, Rule, WhatsAppAccount } from './types';
 
 export async function getIgAccountByIgUserId(igUserId: string): Promise<IgAccount | null> {
   const snapshot = await db
@@ -43,6 +43,11 @@ export async function getAccessToken(igAccountId: string): Promise<string | null
   return (doc.data()?.accessToken as string) ?? null;
 }
 
+export async function getWhatsAppAccessToken(whatsAppAccountId: string): Promise<string | null> {
+  const doc = await db.collection('whatsAppAccountsSecrets').doc(whatsAppAccountId).get();
+  return (doc.data()?.accessToken as string) ?? null;
+}
+
 export async function getActiveRulesForAccount(igAccountId: string): Promise<Rule[]> {
   const snapshot = await db
     .collection('rules')
@@ -51,6 +56,40 @@ export async function getActiveRulesForAccount(igAccountId: string): Promise<Rul
     .orderBy('priority', 'asc')
     .get();
   return snapshot.docs.map((d) => ({ id: d.id, ...d.data() } as Rule));
+}
+
+export async function getWhatsAppAccountByPhoneNumberId(
+  phoneNumberId: string
+): Promise<WhatsAppAccount | null> {
+  const snapshot = await db
+    .collection('whatsAppAccounts')
+    .where('phoneNumberId', '==', phoneNumberId)
+    .limit(1)
+    .get();
+  if (snapshot.empty) return null;
+  const doc = snapshot.docs[0];
+  return { id: doc.id, ...doc.data() } as WhatsAppAccount;
+}
+
+export async function getActiveRulesForWhatsAppAccount(whatsAppAccountId: string): Promise<Rule[]> {
+  const snapshot = await db
+    .collection('rules')
+    .where('whatsAppAccountId', '==', whatsAppAccountId)
+    .where('status', '==', 'active')
+    .orderBy('priority', 'asc')
+    .get();
+  return snapshot.docs.map((d) => ({ id: d.id, ...d.data() } as Rule));
+}
+
+// WhatsApp has no comments/posts, only 1:1 messages — any active rule with a
+// keyword match against the inbound message text fires, first match wins
+// (same priority-ordered semantics as findRuleForComment).
+export function findRuleForWhatsAppMessage(rules: Rule[], messageText: string) {
+  for (const rule of rules) {
+    const matchedKeyword = findMatchingKeyword(messageText, rule.keywords);
+    if (matchedKeyword) return { rule, matchedKeyword };
+  }
+  return null;
 }
 
 export function findRuleForComment(rules: Rule[], mediaId: string, commentText: string) {
@@ -88,6 +127,30 @@ export async function sendFlowNode(params: SendNodeParams) {
     accessToken: params.accessToken,
     recipientCommentId: params.recipientCommentId,
     recipientUserId: params.recipientUserId,
+    text,
+    buttons: params.node.buttons,
+    mediaUrl: params.node.type === 'file' ? params.node.mediaUrl : null,
+  });
+  if (params.conversationId) {
+    await logMessage({ conversationId: params.conversationId, direction: 'outbound', text });
+  }
+}
+
+interface SendWhatsAppNodeParams {
+  phoneNumberId: string;
+  accessToken: string;
+  node: DmFlowNode;
+  username: string;
+  recipientWaId: string;
+  conversationId?: string;
+}
+
+export async function sendWhatsAppFlowNode(params: SendWhatsAppNodeParams) {
+  const text = fillTemplate(params.node.text, params.username);
+  await sendWhatsAppMessage({
+    phoneNumberId: params.phoneNumberId,
+    accessToken: params.accessToken,
+    recipientWaId: params.recipientWaId,
     text,
     buttons: params.node.buttons,
     mediaUrl: params.node.type === 'file' ? params.node.mediaUrl : null,

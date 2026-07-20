@@ -58,6 +58,13 @@ export function NewRuleTypeScreen({ navigation }: Props) {
           <Text style={styles.optionDesc}>{t('rules.typeStoryReplyDesc')}</Text>
         </Card>
       </Pressable>
+
+      <Pressable onPress={() => navigation.navigate('WhatsAppRule', {})}>
+        <Card style={styles.optionCard}>
+          <Text style={styles.optionTitle}>{t('rules.typeWhatsApp')}</Text>
+          <Text style={styles.optionDesc}>{t('rules.typeWhatsAppDesc')}</Text>
+        </Card>
+      </Pressable>
     </Screen>
   );
 }

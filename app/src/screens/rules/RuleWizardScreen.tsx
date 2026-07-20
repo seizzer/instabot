@@ -88,6 +88,8 @@ export function RuleWizardScreen({ navigation, route }: Props) {
       const payload: Omit<Rule, 'id' | 'createdAt' | 'updatedAt'> = {
         ownerUid: user.uid,
         igAccountId: activeIgAccount.id,
+        platform: 'instagram',
+        whatsAppAccountId: null,
         name: name || keywords[0] || 'Yeni Kural',
         targetScope,
         targetPostIds,

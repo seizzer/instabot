@@ -30,6 +30,17 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
+    // whatsAppAccounts/{id} — connection metadata only, no access tokens live here.
+    match /whatsAppAccounts/{whatsAppAccountId} {
+      allow read: if isSignedIn() && resource.data.ownerUid == request.auth.uid;
+      allow write: if false;
+    }
+
+    // whatsAppAccountsSecrets/{id} — access tokens. Never exposed to any client.
+    match /whatsAppAccountsSecrets/{whatsAppAccountId} {
+      allow read, write: if false;
+    }
+
     // rules/{id} — user-authored automation rules.
     match /rules/{ruleId} {
       allow read, update, delete: if isSignedIn() && resource.data.ownerUid == request.auth.uid;

@@ -24,6 +24,7 @@ import {
   Rule,
   RuleStatus,
   Subscription,
+  WhatsAppAccount,
 } from '../types/models';
 
 function toMillis(value: any): number {
@@ -52,6 +53,32 @@ export function subscribeToIgAccounts(
           webhookSubscribed: !!data.webhookSubscribed,
           connectedAt: toMillis(data.connectedAt),
         } as IgAccount;
+      })
+    );
+  });
+}
+
+// ---- whatsAppAccounts ----
+
+export function subscribeToWhatsAppAccounts(
+  ownerUid: string,
+  callback: (accounts: WhatsAppAccount[]) => void
+) {
+  const q = query(collection(db, 'whatsAppAccounts'), where('ownerUid', '==', ownerUid));
+  return onSnapshot(q, (snapshot) => {
+    callback(
+      snapshot.docs.map((d) => {
+        const data = d.data();
+        return {
+          id: d.id,
+          ownerUid: data.ownerUid,
+          phoneNumberId: data.phoneNumberId,
+          wabaId: data.wabaId,
+          displayPhoneNumber: data.displayPhoneNumber,
+          verifiedName: data.verifiedName,
+          status: data.status,
+          connectedAt: toMillis(data.connectedAt),
+        } as WhatsAppAccount;
       })
     );
   });

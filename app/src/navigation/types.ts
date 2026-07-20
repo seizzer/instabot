@@ -27,12 +27,14 @@ export type RulesStackParamList = {
     triggerType: 'mention' | 'reaction' | 'story_mention' | 'story_reply';
     ruleId?: string;
   };
+  WhatsAppRule: { ruleId?: string };
   Paywall: undefined;
 };
 
 export type SettingsStackParamList = {
   SettingsHome: undefined;
   Help: undefined;
+  ConnectWhatsApp: undefined;
 };
 
 export type InboxStackParamList = {

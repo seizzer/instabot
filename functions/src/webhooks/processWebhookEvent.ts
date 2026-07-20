@@ -5,14 +5,19 @@ import {
   classifyDmError,
   ensureConversationStub,
   findRuleForComment,
+  findRuleForWhatsAppMessage,
   getAccessToken,
   getActiveRulesForAccount,
+  getActiveRulesForWhatsAppAccount,
   getIgAccountByPlatformId,
+  getWhatsAppAccessToken,
+  getWhatsAppAccountByPhoneNumberId,
   incrementRuleStats,
   logAutomationEvent,
   logMessage,
   nodeHasFurtherReply,
   sendFlowNode,
+  sendWhatsAppFlowNode,
   upsertConversation,
 } from '../lib/dmFlowRuntime';
 import { Rule } from '../lib/types';
@@ -53,18 +58,54 @@ interface MessagingEvent {
   };
 }
 
+// WhatsApp Cloud API webhooks have a completely different shape from
+// Instagram/Messenger's entry.messaging[] — no comments/posts concept at
+// all, since WhatsApp is 1:1 messaging only.
+interface WhatsAppMessage {
+  from: string;
+  id: string;
+  type: string;
+  text?: { body: string };
+  interactive?: { type: string; button_reply?: { id: string; title: string } };
+}
+interface WhatsAppChangeValue {
+  metadata: { phone_number_id: string };
+  contacts?: { profile?: { name?: string }; wa_id: string }[];
+  messages?: WhatsAppMessage[];
+}
+
 export const processWebhookEvent = onDocumentCreated(
   { document: 'webhookEvents/{eventId}', region: REGION },
   async (event) => {
     const snapshot = event.data;
     if (!snapshot) return;
     const payload = snapshot.data().rawPayload as {
+      object?: string;
       entry?: Array<{
         id: string;
-        changes?: Array<{ field: string; value: CommentChangeValue | MentionChangeValue }>;
+        changes?: Array<{
+          field: string;
+          value: CommentChangeValue | MentionChangeValue | WhatsAppChangeValue;
+        }>;
         messaging?: MessagingEvent[];
       }>;
     };
+
+    if (payload.object === 'whatsapp_business_account') {
+      for (const entry of payload.entry ?? []) {
+        for (const change of entry.changes ?? []) {
+          if (change.field !== 'messages') continue;
+          const value = change.value as WhatsAppChangeValue;
+          for (const message of value.messages ?? []) {
+            const contactName =
+              value.contacts?.find((c) => c.wa_id === message.from)?.profile?.name ?? '';
+            await handleWhatsAppMessageEvent(value.metadata.phone_number_id, message, contactName);
+          }
+        }
+      }
+      await snapshot.ref.update({ processed: true });
+      return;
+    }
 
     for (const entry of payload.entry ?? []) {
       for (const change of entry.changes ?? []) {
@@ -641,4 +682,212 @@ async function handleMessageEvent(igBusinessAccountId: string, messagingEvent: M
     .collection('conversations')
     .doc(conversationId)
     .update({ lastInteractionAt: new Date() });
+}
+
+// WhatsApp has no comments/mentions/stories — every inbound message is
+// either (a) a button reply continuing an existing DM flow (postback
+// equivalent) or (b) plain text, matched against active keyword rules the
+// same way Instagram/Messenger comments are. `conversations`/`igAccountId`
+// fields are reused generically here (see Rule.whatsAppAccountId) rather
+// than adding a parallel schema just for this channel.
+async function handleWhatsAppMessageEvent(
+  phoneNumberId: string,
+  message: WhatsAppMessage,
+  contactName: string
+) {
+  const whatsAppAccount = await getWhatsAppAccountByPhoneNumberId(phoneNumberId);
+  if (!whatsAppAccount || whatsAppAccount.status !== 'active') return;
+
+  const accessToken = await getWhatsAppAccessToken(whatsAppAccount.id);
+  if (!accessToken) return;
+
+  const senderWaId = message.from;
+  const conversationId = `${whatsAppAccount.id}_${senderWaId}`;
+
+  const buttonReply = message.interactive?.button_reply;
+  if (buttonReply) {
+    await handleWhatsAppButtonReply({
+      whatsAppAccountId: whatsAppAccount.id,
+      ownerUid: whatsAppAccount.ownerUid,
+      phoneNumberId,
+      accessToken,
+      conversationId,
+      senderWaId,
+      buttonId: buttonReply.id,
+    });
+    return;
+  }
+
+  const text = message.text?.body;
+  if (!text) return;
+
+  await ensureConversationStub({
+    igAccountId: whatsAppAccount.id,
+    ownerUid: whatsAppAccount.ownerUid,
+    commenterIgId: senderWaId,
+    commenterUsername: contactName,
+  });
+  await logMessage({ conversationId, direction: 'inbound', text });
+  await db.collection('conversations').doc(conversationId).update({ lastInteractionAt: new Date() });
+
+  const rules = await getActiveRulesForWhatsAppAccount(whatsAppAccount.id);
+  const match = findRuleForWhatsAppMessage(rules, text);
+  if (!match || !match.rule.dmEnabled) return;
+  const { rule, matchedKeyword } = match;
+
+  const useVariantB = !!rule.variantB && Math.random() < 0.5;
+  const dmFlow = useVariantB ? rule.variantB!.dmFlow : rule.dmFlow;
+  const statsField = useVariantB ? 'statsB' : 'stats';
+  const startNode = dmFlow.nodes[dmFlow.startNodeId];
+
+  let dmSent = false;
+  let dmError: string | null = null;
+  let dmErrorCode: string | null = null;
+  try {
+    await sendWhatsAppFlowNode({
+      phoneNumberId,
+      accessToken,
+      node: startNode,
+      username: contactName,
+      recipientWaId: senderWaId,
+      conversationId,
+    });
+    dmSent = true;
+    await upsertConversation({
+      igAccountId: whatsAppAccount.id,
+      ownerUid: whatsAppAccount.ownerUid,
+      ruleId: rule.id,
+      commenterIgId: senderWaId,
+      commenterUsername: contactName,
+      currentNodeId: startNode.id,
+      status: nodeHasFurtherReply(startNode) ? 'active' : 'completed',
+    });
+  } catch (err: any) {
+    dmError = err?.message ?? 'DM_SEND_FAILED';
+    dmErrorCode = classifyDmError(dmError!);
+  }
+
+  await logAutomationEvent({
+    ownerUid: whatsAppAccount.ownerUid,
+    igAccountId: whatsAppAccount.id,
+    ruleId: rule.id,
+    commentId: null,
+    commentText: text,
+    commenterIgId: senderWaId,
+    commenterUsername: contactName,
+    eventType: 'comment_match',
+    matchedTrigger: 'keyword',
+    matchedValue: matchedKeyword,
+    publicReplySent: false,
+    dmSent,
+    buttonClicked: null,
+    dmError,
+    dmErrorCode,
+    variant: useVariantB ? 'b' : 'a',
+    aiIntent: null,
+    aiConfidence: null,
+  });
+
+  await incrementRuleStats(rule.id, `${statsField}.commentsMatched`);
+  if (dmSent) await incrementRuleStats(rule.id, `${statsField}.dmsSent`);
+  if (dmError) await incrementRuleStats(rule.id, `${statsField}.dmsFailed`);
+}
+
+async function handleWhatsAppButtonReply(params: {
+  whatsAppAccountId: string;
+  ownerUid: string;
+  phoneNumberId: string;
+  accessToken: string;
+  conversationId: string;
+  senderWaId: string;
+  buttonId: string;
+}) {
+  const conversationSnap = await db.collection('conversations').doc(params.conversationId).get();
+  if (!conversationSnap.exists) return;
+  const conversation = conversationSnap.data()!;
+
+  const ruleSnap = await db.collection('rules').doc(conversation.ruleId).get();
+  if (!ruleSnap.exists) return;
+  const rule = { id: ruleSnap.id, ...ruleSnap.data() } as Rule;
+
+  const currentNode = rule.dmFlow.nodes[conversation.currentNodeId];
+  const button = currentNode?.buttons.find((b) => b.id === params.buttonId);
+  if (!currentNode || !button) return;
+
+  let nextNodeId: string | null = null;
+  let conversationStatus: 'active' | 'completed' = 'completed';
+
+  if (button.action === 'reply' && button.targetNodeId) {
+    const nextNode = rule.dmFlow.nodes[button.targetNodeId];
+    await sendWhatsAppFlowNode({
+      phoneNumberId: params.phoneNumberId,
+      accessToken: params.accessToken,
+      node: nextNode,
+      username: conversation.commenterUsername,
+      recipientWaId: params.senderWaId,
+      conversationId: params.conversationId,
+    });
+    nextNodeId = nextNode.id;
+    conversationStatus = nodeHasFurtherReply(nextNode) ? 'active' : 'completed';
+  } else if (button.action === 'file' && button.fileUrl) {
+    await sendWhatsAppFlowNode({
+      phoneNumberId: params.phoneNumberId,
+      accessToken: params.accessToken,
+      node: { id: 'adhoc', type: 'file', text: '', mediaUrl: button.fileUrl, buttons: [] },
+      username: conversation.commenterUsername,
+      recipientWaId: params.senderWaId,
+      conversationId: params.conversationId,
+    });
+  } else if (button.action === 'delayed_reply' && button.targetNodeId && button.delayHours) {
+    await db.collection('scheduledMessages').add({
+      ownerUid: params.ownerUid,
+      igAccountId: params.whatsAppAccountId,
+      igUserId: params.phoneNumberId,
+      ruleId: rule.id,
+      commenterIgId: params.senderWaId,
+      commenterUsername: conversation.commenterUsername,
+      nodeId: button.targetNodeId,
+      conversationId: params.conversationId,
+      dueAt: new Date(Date.now() + button.delayHours * 60 * 60 * 1000),
+      sent: false,
+      createdAt: new Date(),
+    });
+    nextNodeId = button.targetNodeId;
+    conversationStatus = 'active';
+  }
+
+  if (nextNodeId) {
+    await upsertConversation({
+      igAccountId: params.whatsAppAccountId,
+      ownerUid: params.ownerUid,
+      ruleId: rule.id,
+      commenterIgId: params.senderWaId,
+      commenterUsername: conversation.commenterUsername,
+      currentNodeId: nextNodeId,
+      status: conversationStatus,
+    });
+  } else {
+    await db.collection('conversations').doc(params.conversationId).update({ status: 'completed' });
+  }
+
+  await logAutomationEvent({
+    ownerUid: params.ownerUid,
+    igAccountId: params.whatsAppAccountId,
+    ruleId: rule.id,
+    commentId: null,
+    commentText: null,
+    commenterIgId: params.senderWaId,
+    commenterUsername: conversation.commenterUsername,
+    eventType: 'button_click',
+    matchedTrigger: 'keyword',
+    matchedValue: params.buttonId,
+    publicReplySent: false,
+    dmSent: true,
+    buttonClicked: params.buttonId,
+    dmError: null,
+    aiIntent: null,
+    aiConfidence: null,
+  });
+
+  await incrementRuleStats(rule.id, 'stats.buttonClicks');
 }

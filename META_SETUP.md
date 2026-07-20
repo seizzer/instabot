@@ -43,17 +43,19 @@ App Dashboard sol menü → **Add Product**, şu üçünü ekle:
 ## 4. Facebook Login for Business ayarları
 
 **Facebook Login for Business > Settings** sayfasında **Valid OAuth Redirect
-URIs** alanına ikisini de ekle:
-- Expo geliştirme (Expo Go ile test): `https://auth.expo.io/@<expo-kullanici-adin>/instabot`
-- EAS Build ile üretilen standalone app: `instabot://`
+URIs** alanına şunu ekle:
+```
+https://instabot-app-tr.web.app/instagram-callback.html
+```
+Meta'nın OAuth dialog'u 2018'den beri sadece `https://` redirect URI kabul
+ediyor — `instabot://` gibi özel scheme'ler "should represent a valid URL"
+hatasıyla reddedilir. Bu yüzden gerçek redirect URI, `instabot-site` reposunda
+duran ve Firebase Hosting'e deploy edilen küçük bir "bounce" sayfası
+(`hosting/instagram-callback.html`) — Facebook koda oraya dönüyor, sayfa da
+anında `instabot://redirect`'e yönlendirip uygulamaya geri veriyor.
 
-`<expo-kullanici-adin>` senin Expo hesabındaki kullanıcı adın (`npx expo whoami`
-ile görebilirsin).
-
-**Buraya yapıştır:** Kullandığın redirect URI'yi `app/.env` →
-`EXPO_PUBLIC_META_OAUTH_REDIRECT_URI` alanına yaz (boş bırakırsan kod otomatik
-`instabot://` üretir, ama Expo Go ile test edeceksen açıkça yukarıdaki
-`auth.expo.io` adresini gir).
+**Buraya yapıştır:** Bu URL zaten `app/.env` →
+`EXPO_PUBLIC_META_OAUTH_REDIRECT_URI`'de duruyor, değiştirmene gerek yok.
 
 ## 5. Webhooks ayarları
 
@@ -77,6 +79,38 @@ deploy`), çünkü webhook URL'i deploy sonrası oluşuyor:
 
 Bu üç alan işaretli olmadan ne yorum yakalanır ne de gönderilen DM'lerdeki
 butonlara tıklama bilgisi gelir.
+
+## 5b. Messenger (Facebook Page DM) için Page webhook aboneliği
+
+Instagram webhook'u (adım 5) sadece Instagram Business hesabındaki olayları
+kapsar. Aynı bağlı Facebook Sayfası'nın **kendi Facebook Messenger DM'lerini
+ve kendi gönderilerine gelen yorumları** da yakalamak için AYNI callback
+URL'ine, ayrı bir "Page" aboneliği daha açman lazım — kod tarafı zaten hazır
+(`getIgAccountByPlatformId` bağlı Page id'sini otomatik tanıyor).
+
+1. App Dashboard sol menü → **Add Product** → **Messenger** ürününü ekle
+   (henüz ekli değilse).
+2. **Webhooks** ürününe git → üstteki obje seçicisinden **Instagram**
+   yerine **Page**'i seç (aynı sayfada iki ayrı obje sekmesi var, karıştırma).
+3. **Subscribe to this object**:
+   - Callback URL: adım 5'teki **aynı** `instagramWebhook` URL'i
+   - Verify Token: adım 5'te ürettiğin **aynı** string
+   - **Verify and Save**
+4. Doğrulama geçince şu **fields**'ı işaretle:
+   - `feed` (Sayfa'nın kendi gönderilerine gelen yorumlar — Instagram'daki
+     `comments` alanının Facebook Page karşılığı, isim farklı)
+   - `messages`
+   - `messaging_postbacks`
+   - `message_reactions`
+   - `messaging_referrals`
+5. **Messenger** ürünü > **Settings** sayfasından, bağlı Facebook Sayfası'nı
+   **"Webhook events"** altına ekle (sayfa seçilmeden Page tipi olaylar hiç
+   gelmez — bu adım Instagram tarafında gerekmiyordu ama Messenger'da şart).
+
+Bunlar tamamlanınca ekstra kod/deploy gerekmiyor — mevcut kural motoru
+(`keyword` tipi kurallar) Facebook Page yorumlarını/DM'lerini de otomatik
+yakalayacak, çünkü eşleşme yorum id'si + metne göre yapılıyor, platform fark
+etmiyor.
 
 ## 6. Kendi hesabınla test etme (App Review beklemeden)
 

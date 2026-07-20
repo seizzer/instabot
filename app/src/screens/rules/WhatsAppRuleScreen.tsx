@@ -7,23 +7,29 @@ import { TextField } from '../../components/TextField';
 import { Button } from '../../components/Button';
 import { colors, spacing, typography } from '../../theme/theme';
 import { useAuth } from '../../store/AuthContext';
-import { subscribeToIgAccounts, deleteRule, getRule } from '../../services/firestore';
-import { createEmptyDmFlow, createEmptyRuleStats, DmFlow, IgAccount, Rule } from '../../types/models';
+import { subscribeToWhatsAppAccounts, deleteRule, getRule } from '../../services/firestore';
+import {
+  createEmptyDmFlow,
+  createEmptyRuleStats,
+  DmFlow,
+  Rule,
+  WhatsAppAccount,
+} from '../../types/models';
 import { RulesStackParamList } from '../../navigation/types';
+import { KeywordStep } from './flowBuilder/KeywordStep';
 import { DmFlowStep } from './flowBuilder/DmFlowStep';
 import { saveRuleWithFreemiumGate } from './ruleSaveHelpers';
 
-type Props = NativeStackScreenProps<RulesStackParamList, 'SimpleTriggerRule'>;
+type Props = NativeStackScreenProps<RulesStackParamList, 'WhatsAppRule'>;
 
-export function SimpleTriggerRuleScreen({ navigation, route }: Props) {
-  const { triggerType } = route.params;
-  const editingRuleId = route.params.ruleId;
+export function WhatsAppRuleScreen({ navigation, route }: Props) {
+  const editingRuleId = route.params?.ruleId;
   const { t } = useTranslation();
   const { user, subscription } = useAuth();
 
-  const [igAccounts, setIgAccounts] = useState<IgAccount[]>([]);
+  const [whatsAppAccounts, setWhatsAppAccounts] = useState<WhatsAppAccount[]>([]);
   const [name, setName] = useState('');
-  const [reactionFilter, setReactionFilter] = useState('');
+  const [keywords, setKeywords] = useState<string[]>([]);
   const [dmFlow, setDmFlow] = useState<DmFlow>(createEmptyDmFlow());
   const [existingPriority, setExistingPriority] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
@@ -32,7 +38,7 @@ export function SimpleTriggerRuleScreen({ navigation, route }: Props) {
 
   useEffect(() => {
     if (!user) return;
-    return subscribeToIgAccounts(user.uid, setIgAccounts);
+    return subscribeToWhatsAppAccounts(user.uid, setWhatsAppAccounts);
   }, [user]);
 
   useEffect(() => {
@@ -44,39 +50,32 @@ export function SimpleTriggerRuleScreen({ navigation, route }: Props) {
         return;
       }
       setName(rule.name);
-      setReactionFilter(rule.reactionFilter ?? '');
+      setKeywords(rule.keywords);
       setDmFlow(rule.dmFlow);
       setExistingPriority(rule.priority);
       setLoadingRule(false);
     });
   }, [editingRuleId]);
 
-  const activeIgAccount = igAccounts[0] ?? null;
-  const TITLES: Record<typeof triggerType, string> = {
-    mention: t('rules.mentionRuleTitle'),
-    reaction: t('rules.reactionRuleTitle'),
-    story_mention: t('rules.storyMentionRuleTitle'),
-    story_reply: t('rules.storyReplyRuleTitle'),
-  };
-  const title = TITLES[triggerType];
+  const activeWhatsAppAccount = whatsAppAccounts[0] ?? null;
 
   const handleSave = async () => {
-    if (!user || !activeIgAccount) return;
+    if (!user || !activeWhatsAppAccount || keywords.length === 0) return;
 
     setSaving(true);
     try {
       const payload: Omit<Rule, 'id' | 'createdAt' | 'updatedAt'> = {
         ownerUid: user.uid,
-        igAccountId: activeIgAccount.id,
-        platform: 'instagram',
-        whatsAppAccountId: null,
-        name: name || title,
+        igAccountId: '',
+        platform: 'whatsapp',
+        whatsAppAccountId: activeWhatsAppAccount.id,
+        name: name || keywords[0] || 'Yeni Kural',
         targetScope: 'all_posts',
         targetPostIds: [],
-        triggerType,
+        triggerType: 'keyword',
         aiIntentTags: [],
-        keywords: [],
-        reactionFilter: triggerType === 'reaction' ? reactionFilter.trim() || null : null,
+        keywords,
+        reactionFilter: null,
         publicReplyEnabled: false,
         publicReplyText: '',
         dmEnabled: true,
@@ -136,29 +135,36 @@ export function SimpleTriggerRuleScreen({ navigation, route }: Props) {
     );
   }
 
+  if (!activeWhatsAppAccount) {
+    return (
+      <Screen>
+        <Text style={styles.title}>{t('rules.whatsAppRuleTitle')}</Text>
+        <Text style={styles.noAccountText}>{t('rules.whatsAppAccountRequired')}</Text>
+      </Screen>
+    );
+  }
+
   return (
     <Screen>
-      <Text style={styles.title}>{title}</Text>
+      <Text style={styles.title}>{t('rules.whatsAppRuleTitle')}</Text>
 
       <TextField
         label="Kural adı (opsiyonel)"
         value={name}
         onChangeText={setName}
-        placeholder={title}
+        placeholder={t('rules.whatsAppRuleTitle') ?? undefined}
       />
 
-      {triggerType === 'reaction' && (
-        <TextField
-          label={t('rules.reactionFilterLabel') ?? undefined}
-          placeholder={t('rules.reactionFilterPlaceholder') ?? undefined}
-          value={reactionFilter}
-          onChangeText={setReactionFilter}
-        />
-      )}
-
+      <KeywordStep keywords={keywords} onChange={setKeywords} />
       <DmFlowStep dmFlow={dmFlow} onChange={setDmFlow} />
 
-      <Button label={t('rules.saveRule')} onPress={handleSave} loading={saving} style={styles.saveButton} />
+      <Button
+        label={t('rules.saveRule')}
+        onPress={handleSave}
+        loading={saving}
+        disabled={keywords.length === 0}
+        style={styles.saveButton}
+      />
 
       {editingRuleId && (
         <Button
@@ -175,6 +181,7 @@ export function SimpleTriggerRuleScreen({ navigation, route }: Props) {
 
 const styles = StyleSheet.create({
   title: { ...typography.h1, color: colors.text, marginBottom: spacing.lg },
+  noAccountText: { ...typography.body, color: colors.textMuted },
   saveButton: { marginTop: spacing.lg },
   deleteButton: { marginTop: spacing.sm },
 });

@@ -4,6 +4,7 @@ export { revenueCatWebhook } from './webhooks/revenueCatWebhook';
 export { refreshInstagramTokens } from './scheduled/refreshInstagramTokens';
 export { processScheduledMessages } from './scheduled/processScheduledMessages';
 export { exchangeInstagramCode } from './callable/exchangeInstagramCode';
+export { connectWhatsAppAccount } from './callable/connectWhatsAppAccount';
 export { listInstagramMedia } from './callable/listInstagramMedia';
 export { previewAiReply } from './callable/previewAiReply';
 export { deleteMyAccount } from './callable/deleteMyAccount';

@@ -16,6 +16,20 @@ export const exchangeInstagramCode = httpsCallable<
   ExchangeInstagramCodeResponse
 >(functions, 'exchangeInstagramCode');
 
+export interface ConnectWhatsAppAccountRequest {
+  phoneNumberId: string;
+  wabaId: string;
+  accessToken: string;
+}
+export interface ConnectWhatsAppAccountResponse {
+  whatsAppAccountId: string;
+  displayPhoneNumber: string;
+}
+export const connectWhatsAppAccount = httpsCallable<
+  ConnectWhatsAppAccountRequest,
+  ConnectWhatsAppAccountResponse
+>(functions, 'connectWhatsAppAccount');
+
 export interface PreviewAiReplyRequest {
   commentText: string;
   tone: 'samimi' | 'resmi';

@@ -18,10 +18,10 @@ import {
 import { isPasswordValid } from '../../utils/passwordPolicy';
 import { getAuthErrorMessage } from '../../utils/authErrors';
 import { deleteMyAccount, exchangeInstagramCode } from '../../services/functions';
-import { subscribeToIgAccounts } from '../../services/firestore';
+import { subscribeToIgAccounts, subscribeToWhatsAppAccounts } from '../../services/firestore';
 import { connectInstagramAccount } from '../../services/instagramAuth';
 import { changeLanguage, SUPPORTED_LANGUAGES, SupportedLanguage } from '../../i18n';
-import { IgAccount } from '../../types/models';
+import { IgAccount, WhatsAppAccount } from '../../types/models';
 
 const PRIVACY_URL = 'https://chatterly.live/privacy.html';
 const TERMS_URL = 'https://chatterly.live/terms.html';
@@ -32,6 +32,7 @@ export function SettingsScreen() {
   const navigation = useNavigation<any>();
   const { user, profile, subscription, refreshProfile } = useAuth();
   const [igAccounts, setIgAccounts] = useState<IgAccount[]>([]);
+  const [whatsAppAccounts, setWhatsAppAccounts] = useState<WhatsAppAccount[]>([]);
   const [reconnecting, setReconnecting] = useState(false);
 
   const isPasswordUser = user?.providerData.some((p) => p.providerId === 'password') ?? false;
@@ -52,6 +53,11 @@ export function SettingsScreen() {
   useEffect(() => {
     if (!user) return;
     return subscribeToIgAccounts(user.uid, setIgAccounts);
+  }, [user]);
+
+  useEffect(() => {
+    if (!user) return;
+    return subscribeToWhatsAppAccounts(user.uid, setWhatsAppAccounts);
   }, [user]);
 
   const handleReconnect = async () => {
@@ -226,6 +232,26 @@ export function SettingsScreen() {
             </View>
           ))
         )}
+      </Card>
+
+      <Card style={styles.card}>
+        <Text style={styles.sectionLabel}>{t('settings.connectedWhatsAppAccounts')}</Text>
+        {whatsAppAccounts.length === 0 ? (
+          <Text style={styles.value}>—</Text>
+        ) : (
+          whatsAppAccounts.map((account) => (
+            <View key={account.id} style={styles.accountRow}>
+              <Text style={styles.value}>{account.displayPhoneNumber}</Text>
+              {account.status === 'active' && <Text style={styles.accountStatusOk}>●</Text>}
+            </View>
+          ))
+        )}
+        <Button
+          label={t('settings.connectWhatsAppButton')}
+          variant="ghost"
+          onPress={() => navigation.navigate('ConnectWhatsApp')}
+          style={styles.upgradeButton}
+        />
       </Card>
 
       <Card style={styles.card}>

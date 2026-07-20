@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { SettingsStackParamList } from './types';
 import { SettingsScreen } from '../screens/settings/SettingsScreen';
 import { HelpScreen } from '../screens/settings/HelpScreen';
+import { ConnectWhatsAppScreen } from '../screens/settings/ConnectWhatsAppScreen';
 import { colors } from '../theme/theme';
 
 const Stack = createNativeStackNavigator<SettingsStackParamList>();
@@ -14,6 +15,11 @@ export function SettingsNavigator() {
     <Stack.Navigator screenOptions={{ headerTintColor: colors.primary }}>
       <Stack.Screen name="SettingsHome" component={SettingsScreen} options={{ headerShown: false }} />
       <Stack.Screen name="Help" component={HelpScreen} options={{ title: t('help.title') }} />
+      <Stack.Screen
+        name="ConnectWhatsApp"
+        component={ConnectWhatsAppScreen}
+        options={{ title: t('settings.connectWhatsAppTitle') }}
+      />
     </Stack.Navigator>
   );
 }
