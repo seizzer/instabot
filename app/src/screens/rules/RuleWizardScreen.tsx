@@ -7,12 +7,13 @@ import { Button } from '../../components/Button';
 import { TextField } from '../../components/TextField';
 import { colors, spacing, typography } from '../../theme/theme';
 import { useAuth } from '../../store/AuthContext';
-import { subscribeToIgAccounts, deleteRule, getRule } from '../../services/firestore';
+import { useActiveInstagramAccount } from '../../store/ActiveAccountContext';
+import { AccountPicker } from '../../components/AccountPicker';
+import { deleteRule, getRule } from '../../services/firestore';
 import {
   createEmptyDmFlow,
   createEmptyRuleStats,
   DmFlow,
-  IgAccount,
   Rule,
   RuleTargetScope,
 } from '../../types/models';
@@ -33,7 +34,7 @@ export function RuleWizardScreen({ navigation, route }: Props) {
   const { user, subscription } = useAuth();
   const editingRuleId = route.params?.ruleId;
 
-  const [igAccounts, setIgAccounts] = useState<IgAccount[]>([]);
+  const activeIgAccount = useActiveInstagramAccount();
   const [step, setStep] = useState(0);
   const [name, setName] = useState('');
   const [targetScope, setTargetScope] = useState<RuleTargetScope>('all_posts');
@@ -49,11 +50,6 @@ export function RuleWizardScreen({ navigation, route }: Props) {
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [loadingRule, setLoadingRule] = useState(!!editingRuleId);
-
-  useEffect(() => {
-    if (!user) return;
-    return subscribeToIgAccounts(user.uid, setIgAccounts);
-  }, [user]);
 
   useEffect(() => {
     if (!editingRuleId) return;
@@ -77,8 +73,6 @@ export function RuleWizardScreen({ navigation, route }: Props) {
       setLoadingRule(false);
     });
   }, [editingRuleId]);
-
-  const activeIgAccount = igAccounts[0] ?? null;
 
   const handleSave = async () => {
     if (!user || !activeIgAccount) return;
@@ -180,6 +174,7 @@ export function RuleWizardScreen({ navigation, route }: Props) {
 
   return (
     <Screen>
+      {step === 0 && <AccountPicker />}
       <View style={styles.progressRow}>
         {Array.from({ length: TOTAL_STEPS }).map((_, i) => (
           <View key={i} style={[styles.progressDot, i <= step && styles.progressDotActive]} />

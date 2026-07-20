@@ -7,8 +7,10 @@ import { Screen } from '../../components/Screen';
 import { Card } from '../../components/Card';
 import { Button } from '../../components/Button';
 import { EmptyState } from '../../components/EmptyState';
+import { AccountPicker } from '../../components/AccountPicker';
 import { colors, spacing, typography } from '../../theme/theme';
 import { useAuth } from '../../store/AuthContext';
+import { useActiveAccount } from '../../store/ActiveAccountContext';
 import { subscribeToConversations } from '../../services/firestore';
 import { Conversation } from '../../types/models';
 import { InboxStackParamList } from '../../navigation/types';
@@ -22,12 +24,26 @@ function formatTime(ms: number): string {
 export function InboxListScreen({ navigation }: Props) {
   const { t } = useTranslation();
   const { user } = useAuth();
+  const { activeAccount } = useActiveAccount();
   const [conversations, setConversations] = useState<Conversation[]>([]);
 
   useEffect(() => {
     if (!user) return;
     return subscribeToConversations(user.uid, setConversations);
   }, [user]);
+
+  // `igAccountId` doubles as the generic "connected channel id" for
+  // WhatsApp conversations too (see processWebhookEvent's WhatsApp
+  // handlers) — comparing against whichever account is active scopes the
+  // list correctly regardless of platform.
+  const activeAccountId = activeAccount
+    ? activeAccount.platform === 'whatsapp'
+      ? activeAccount.whatsAppAccount.id
+      : activeAccount.igAccount.id
+    : null;
+  const accountConversations = activeAccountId
+    ? conversations.filter((c) => c.igAccountId === activeAccountId)
+    : conversations;
 
   return (
     <Screen scroll={false} style={styles.screen}>
@@ -36,8 +52,10 @@ export function InboxListScreen({ navigation }: Props) {
         <Button label={t('inbox.broadcast')} variant="secondary" onPress={() => navigation.navigate('Broadcast')} />
       </View>
 
+      <AccountPicker />
+
       <FlatList
-        data={conversations}
+        data={accountConversations}
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.listContent}
         ListEmptyComponent={<EmptyState icon="💬" message={t('inbox.emptyState')} />}

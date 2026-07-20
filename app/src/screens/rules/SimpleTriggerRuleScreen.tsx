@@ -5,10 +5,12 @@ import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Screen } from '../../components/Screen';
 import { TextField } from '../../components/TextField';
 import { Button } from '../../components/Button';
+import { AccountPicker } from '../../components/AccountPicker';
 import { colors, spacing, typography } from '../../theme/theme';
 import { useAuth } from '../../store/AuthContext';
-import { subscribeToIgAccounts, deleteRule, getRule } from '../../services/firestore';
-import { createEmptyDmFlow, createEmptyRuleStats, DmFlow, IgAccount, Rule } from '../../types/models';
+import { useActiveInstagramAccount } from '../../store/ActiveAccountContext';
+import { deleteRule, getRule } from '../../services/firestore';
+import { createEmptyDmFlow, createEmptyRuleStats, DmFlow, Rule } from '../../types/models';
 import { RulesStackParamList } from '../../navigation/types';
 import { DmFlowStep } from './flowBuilder/DmFlowStep';
 import { saveRuleWithFreemiumGate } from './ruleSaveHelpers';
@@ -21,7 +23,7 @@ export function SimpleTriggerRuleScreen({ navigation, route }: Props) {
   const { t } = useTranslation();
   const { user, subscription } = useAuth();
 
-  const [igAccounts, setIgAccounts] = useState<IgAccount[]>([]);
+  const activeIgAccount = useActiveInstagramAccount();
   const [name, setName] = useState('');
   const [reactionFilter, setReactionFilter] = useState('');
   const [dmFlow, setDmFlow] = useState<DmFlow>(createEmptyDmFlow());
@@ -29,11 +31,6 @@ export function SimpleTriggerRuleScreen({ navigation, route }: Props) {
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [loadingRule, setLoadingRule] = useState(!!editingRuleId);
-
-  useEffect(() => {
-    if (!user) return;
-    return subscribeToIgAccounts(user.uid, setIgAccounts);
-  }, [user]);
 
   useEffect(() => {
     if (!editingRuleId) return;
@@ -51,7 +48,6 @@ export function SimpleTriggerRuleScreen({ navigation, route }: Props) {
     });
   }, [editingRuleId]);
 
-  const activeIgAccount = igAccounts[0] ?? null;
   const TITLES: Record<typeof triggerType, string> = {
     mention: t('rules.mentionRuleTitle'),
     reaction: t('rules.reactionRuleTitle'),
@@ -138,6 +134,7 @@ export function SimpleTriggerRuleScreen({ navigation, route }: Props) {
 
   return (
     <Screen>
+      <AccountPicker />
       <Text style={styles.title}>{title}</Text>
 
       <TextField

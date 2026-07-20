@@ -5,16 +5,12 @@ import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Screen } from '../../components/Screen';
 import { TextField } from '../../components/TextField';
 import { Button } from '../../components/Button';
+import { AccountPicker } from '../../components/AccountPicker';
 import { colors, spacing, typography } from '../../theme/theme';
 import { useAuth } from '../../store/AuthContext';
-import { subscribeToWhatsAppAccounts, deleteRule, getRule } from '../../services/firestore';
-import {
-  createEmptyDmFlow,
-  createEmptyRuleStats,
-  DmFlow,
-  Rule,
-  WhatsAppAccount,
-} from '../../types/models';
+import { useActiveWhatsAppAccount } from '../../store/ActiveAccountContext';
+import { deleteRule, getRule } from '../../services/firestore';
+import { createEmptyDmFlow, createEmptyRuleStats, DmFlow, Rule } from '../../types/models';
 import { RulesStackParamList } from '../../navigation/types';
 import { KeywordStep } from './flowBuilder/KeywordStep';
 import { DmFlowStep } from './flowBuilder/DmFlowStep';
@@ -27,7 +23,7 @@ export function WhatsAppRuleScreen({ navigation, route }: Props) {
   const { t } = useTranslation();
   const { user, subscription } = useAuth();
 
-  const [whatsAppAccounts, setWhatsAppAccounts] = useState<WhatsAppAccount[]>([]);
+  const activeWhatsAppAccount = useActiveWhatsAppAccount();
   const [name, setName] = useState('');
   const [keywords, setKeywords] = useState<string[]>([]);
   const [dmFlow, setDmFlow] = useState<DmFlow>(createEmptyDmFlow());
@@ -35,11 +31,6 @@ export function WhatsAppRuleScreen({ navigation, route }: Props) {
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [loadingRule, setLoadingRule] = useState(!!editingRuleId);
-
-  useEffect(() => {
-    if (!user) return;
-    return subscribeToWhatsAppAccounts(user.uid, setWhatsAppAccounts);
-  }, [user]);
 
   useEffect(() => {
     if (!editingRuleId) return;
@@ -56,8 +47,6 @@ export function WhatsAppRuleScreen({ navigation, route }: Props) {
       setLoadingRule(false);
     });
   }, [editingRuleId]);
-
-  const activeWhatsAppAccount = whatsAppAccounts[0] ?? null;
 
   const handleSave = async () => {
     if (!user || !activeWhatsAppAccount || keywords.length === 0) return;
@@ -146,6 +135,7 @@ export function WhatsAppRuleScreen({ navigation, route }: Props) {
 
   return (
     <Screen>
+      <AccountPicker />
       <Text style={styles.title}>{t('rules.whatsAppRuleTitle')}</Text>
 
       <TextField

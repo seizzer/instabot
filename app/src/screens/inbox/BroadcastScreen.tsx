@@ -5,11 +5,13 @@ import { Screen } from '../../components/Screen';
 import { Card } from '../../components/Card';
 import { TextField } from '../../components/TextField';
 import { Button } from '../../components/Button';
+import { AccountPicker } from '../../components/AccountPicker';
 import { colors, spacing, typography } from '../../theme/theme';
 import { useAuth } from '../../store/AuthContext';
-import { subscribeToBroadcasts, subscribeToIgAccounts } from '../../services/firestore';
+import { useActiveInstagramAccount } from '../../store/ActiveAccountContext';
+import { subscribeToBroadcasts } from '../../services/firestore';
 import { getBroadcastRecipientCount, sendBroadcast } from '../../services/functions';
-import { Broadcast, IgAccount } from '../../types/models';
+import { Broadcast } from '../../types/models';
 
 const MAX_RECIPIENTS_PER_SEND = 100;
 
@@ -20,7 +22,7 @@ function formatTime(ms: number): string {
 export function BroadcastScreen() {
   const { t } = useTranslation();
   const { user } = useAuth();
-  const [igAccounts, setIgAccounts] = useState<IgAccount[]>([]);
+  const activeIgAccount = useActiveInstagramAccount();
   const [broadcasts, setBroadcasts] = useState<Broadcast[]>([]);
   const [text, setText] = useState('');
   const [targetTag, setTargetTag] = useState('');
@@ -29,15 +31,8 @@ export function BroadcastScreen() {
 
   useEffect(() => {
     if (!user) return;
-    const unsubAccounts = subscribeToIgAccounts(user.uid, setIgAccounts);
-    const unsubBroadcasts = subscribeToBroadcasts(user.uid, setBroadcasts);
-    return () => {
-      unsubAccounts();
-      unsubBroadcasts();
-    };
+    return subscribeToBroadcasts(user.uid, setBroadcasts);
   }, [user]);
-
-  const activeIgAccount = igAccounts[0] ?? null;
 
   // Debounced so retyping the tag filter doesn't fire a callable per keystroke.
   useEffect(() => {
@@ -80,6 +75,7 @@ export function BroadcastScreen() {
 
   return (
     <Screen scroll={false} style={styles.screen}>
+      <AccountPicker />
       <Text style={styles.title}>{t('inbox.broadcast')}</Text>
       <Text style={styles.subtitle}>{t('inbox.broadcastSubtitle')}</Text>
 

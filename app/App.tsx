@@ -5,6 +5,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { initI18n } from './src/i18n';
 import { AuthProvider } from './src/store/AuthContext';
+import { ActiveAccountProvider } from './src/store/ActiveAccountContext';
 import { RootNavigator } from './src/navigation/RootNavigator';
 import { colors, spacing } from './src/theme/theme';
 import { configureGoogleSignIn, configureFacebookSignIn } from './src/services/socialAuth';
@@ -31,7 +32,9 @@ export default function App() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
         <AuthProvider>
-          <RootNavigator />
+          <ActiveAccountProvider>
+            <RootNavigator />
+          </ActiveAccountProvider>
         </AuthProvider>
         <StatusBar style="dark" />
       </SafeAreaProvider>

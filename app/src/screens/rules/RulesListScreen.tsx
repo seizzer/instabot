@@ -8,8 +8,10 @@ import { Card } from '../../components/Card';
 import { Button } from '../../components/Button';
 import { TextField } from '../../components/TextField';
 import { EmptyState } from '../../components/EmptyState';
+import { AccountPicker } from '../../components/AccountPicker';
 import { colors, spacing, typography } from '../../theme/theme';
 import { useAuth } from '../../store/AuthContext';
+import { useActiveAccount } from '../../store/ActiveAccountContext';
 import { setRuleStatus, subscribeToRules } from '../../services/firestore';
 import { Rule, RuleStatus } from '../../types/models';
 import { RulesStackParamList } from '../../navigation/types';
@@ -18,12 +20,34 @@ type Props = NativeStackScreenProps<RulesStackParamList, 'RulesList'>;
 
 type StatusFilter = 'all' | RuleStatus;
 
+const SIMPLE_TRIGGER_TYPES = ['mention', 'reaction', 'story_mention', 'story_reply'] as const;
+
 function ruleSubtitle(rule: Rule, t: (key: string) => string | null): string {
   if (rule.triggerType === 'mention') return t('rules.typeMention') ?? '';
+  if (rule.triggerType === 'story_mention') return t('rules.typeStoryMention') ?? '';
+  if (rule.triggerType === 'story_reply') return t('rules.typeStoryReply') ?? '';
   if (rule.triggerType === 'reaction') {
     return rule.reactionFilter ? `${rule.reactionFilter} tepkisi` : t('rules.anyReaction') ?? '';
   }
   return rule.keywords.join(', ');
+}
+
+function openRule(
+  navigation: Props['navigation'],
+  rule: Rule
+) {
+  if (rule.platform === 'whatsapp') {
+    navigation.navigate('WhatsAppRule', { ruleId: rule.id });
+    return;
+  }
+  if ((SIMPLE_TRIGGER_TYPES as readonly string[]).includes(rule.triggerType)) {
+    navigation.navigate('SimpleTriggerRule', {
+      triggerType: rule.triggerType as (typeof SIMPLE_TRIGGER_TYPES)[number],
+      ruleId: rule.id,
+    });
+    return;
+  }
+  navigation.navigate('RuleWizard', { ruleId: rule.id });
 }
 
 function ruleMatchesQuery(rule: Rule, query: string): boolean {
@@ -40,6 +64,7 @@ const STATUS_FILTERS: { value: StatusFilter; labelKey: string }[] = [
 export function RulesListScreen({ navigation }: Props) {
   const { t } = useTranslation();
   const { user } = useAuth();
+  const { activeAccount } = useActiveAccount();
   const [rules, setRules] = useState<Rule[]>([]);
   const [query, setQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
@@ -49,7 +74,17 @@ export function RulesListScreen({ navigation }: Props) {
     return subscribeToRules(user.uid, setRules);
   }, [user]);
 
-  const filteredRules = rules.filter(
+  // Rules span whichever accounts are connected — once there's more than
+  // one, only show the ones belonging to whichever account is active.
+  const accountRules = rules.filter((rule) => {
+    if (!activeAccount) return true;
+    if (activeAccount.platform === 'whatsapp') {
+      return rule.platform === 'whatsapp' && rule.whatsAppAccountId === activeAccount.whatsAppAccount.id;
+    }
+    return rule.platform !== 'whatsapp' && rule.igAccountId === activeAccount.igAccount.id;
+  });
+
+  const filteredRules = accountRules.filter(
     (rule) =>
       (statusFilter === 'all' || rule.status === statusFilter) &&
       (query.trim() === '' || ruleMatchesQuery(rule, query.trim()))
@@ -65,7 +100,9 @@ export function RulesListScreen({ navigation }: Props) {
         />
       </View>
 
-      {rules.length > 0 && (
+      <AccountPicker />
+
+      {accountRules.length > 0 && (
         <>
           <TextField
             placeholder={t('rules.searchPlaceholder') ?? undefined}
@@ -101,21 +138,12 @@ export function RulesListScreen({ navigation }: Props) {
         ListEmptyComponent={
           <EmptyState
             icon="🗂️"
-            message={rules.length > 0 ? t('rules.noSearchResults') : t('rules.emptyState')}
+            message={accountRules.length > 0 ? t('rules.noSearchResults') : t('rules.emptyState')}
           />
         }
         renderItem={({ item, index }) => (
           <Animated.View entering={FadeInDown.delay(Math.min(index, 8) * 60).springify()}>
-            <Pressable
-              onPress={() =>
-                item.triggerType === 'mention' || item.triggerType === 'reaction'
-                  ? navigation.navigate('SimpleTriggerRule', {
-                      triggerType: item.triggerType,
-                      ruleId: item.id,
-                    })
-                  : navigation.navigate('RuleWizard', { ruleId: item.id })
-              }
-            >
+            <Pressable onPress={() => openRule(navigation, item)}>
               <Card style={styles.ruleCard}>
                 <View style={styles.ruleRow}>
                   <View style={styles.ruleInfo}>
