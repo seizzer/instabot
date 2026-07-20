@@ -169,6 +169,99 @@ modda devre dışı kalabilir — adım 7'yi önce bitir.
 
 ---
 
+## 10. WhatsApp Business API — hesap bağlama ve onay süreci
+
+Kod tarafı hazır (`connectWhatsAppAccount` callable + webhook işleme). Burada
+anlatılan her şey Meta panelinde elle yapılıyor; sonunda 3 değer elde
+edeceksin: **Phone Number ID**, **WhatsApp Business Account ID (WABA ID)**,
+ve **kalıcı erişim token'ı** — bunları uygulamada Ayarlar > WhatsApp bağla
+ekranına yapıştıracaksın.
+
+### 10.1 Test için hızlı başlangıç (gerçek numara olmadan)
+
+1. Aynı Meta App'in Dashboard'unda **Add Product** → **WhatsApp** ekle.
+2. **WhatsApp > API Setup** sayfasına git. Meta sana otomatik bir **test
+   telefon numarası** ve geçici (24 saatlik) bir token verir.
+3. Bu sayfada görünen **Phone Number ID** ve **WhatsApp Business Account ID**
+   değerlerini not al.
+4. **To** alanına kendi WhatsApp numaranı ekle (test alıcısı olarak
+   doğrulaman gerekir — SMS/arama ile kod gelir).
+5. Bu geçici token'ı `ConnectWhatsAppScreen`'e yapıştırıp uçtan uca test
+   edebilirsin — ama 24 saatte bir yenilenmesi gerekir, üretim için adım
+   10.2'ye geç.
+
+### 10.2 Kalıcı token (üretim için — System User)
+
+Geçici token'lar üretimde işe yaramaz, **System User** üzerinden kalıcı bir
+token üretmen lazım:
+
+1. https://business.facebook.com → **Business Settings**.
+2. **Users > System Users** → **Add** → isim ver, rol: **Admin**.
+3. Oluşan System User'a tıkla → **Add Assets** → **Apps** sekmesinden bu Meta
+   App'i seç, **Full Control** ver.
+4. Aynı ekranda **Assets** kısmından WhatsApp hesabını (WABA) da bu System
+   User'a ata.
+5. **Generate New Token** → App olarak bu Meta App'i seç → izinler:
+   `whatsapp_business_messaging`, `whatsapp_business_management` → **Generate
+   Token**.
+6. Çıkan token'ı **hemen kopyala** (bir daha gösterilmez) — bu, süresi
+   dolmayan kalıcı token'ın.
+
+**Buraya yapıştır:** Bu token'ı, adım 10.1'deki Phone Number ID ve WABA ID
+ile birlikte uygulamadaki **Ayarlar > WhatsApp bağla** ekranına gir.
+
+### 10.3 Gerçek işletme numarası ekleme (test numarası yerine)
+
+1. **WhatsApp > API Setup** → **Add phone number**.
+2. Görünen ad (display name), işletme kategorisi, açıklama gir.
+3. Numaranı SMS veya sesli arama ile doğrula.
+4. **Görünen ad onayı ayrı bir süreç** — Meta bunu birkaç gün içinde
+   inceleyip onaylıyor/reddediyor (marka adına uygun olmalı, jenerik
+   kelimeler reddedilebilir).
+
+### 10.4 Webhook aboneliği
+
+Aynı callback URL'i (adım 5'teki `instagramWebhook`) ve verify token'ı
+kullan:
+
+1. **WhatsApp > Configuration** → **Webhook** → **Edit**.
+2. Callback URL + Verify Token'ı gir → **Verify and Save**.
+3. **Webhook fields**'tan `messages`'ı işaretle.
+4. Aynı sayfada, hangi **WhatsApp Business Account**'ın bu webhook'a
+   abone olacağını seç (birden fazla numaran varsa hepsini ekle).
+
+### 10.5 Business Verification (üretim ölçeği için gerekli)
+
+Doğrulanmamış bir işletme, WhatsApp'ta çok düşük bir mesaj limitiyle
+başlar (Tier 1: 24 saatte ~250 benzersiz kişi). Daha fazlası için:
+
+1. **Business Settings > Security Center** → **Start Verification**.
+2. Şirket belgesi/vergi levhası, adres kanıtı gibi belgeler istenir.
+3. Onaylanınca mesaj limiti otomatik yükselir (kullanım kalitesine göre
+   kademeli artar — Meta bunu "tier" sistemiyle otomatik yönetir, elle bir
+   şey yapman gerekmez).
+
+### 10.6 Mesaj Şablonları (Message Templates) — ileride broadcast için
+
+**Önemli:** Mevcut kod (`sendWhatsAppMessage`) sadece **24 saatlik
+mesajlaşma penceresi içinde** (kullanıcı sana yazdıktan sonra) serbest metin
+gönderiyor — bu, şu anki "gelen mesaja otomatik cevap" özelliği için
+yeterli, **şablon onayına ihtiyacın yok**.
+
+Ama ileride "broadcast" (Instagram'daki gibi, pencere dışına da mesaj atma)
+özelliğini WhatsApp'a da eklemek istersen, önce onaylı bir **Message
+Template** gerekir:
+
+1. **WhatsApp Manager > Message Templates** → **Create Template**.
+2. Kategori seç: **Marketing** (tanıtım), **Utility** (sipariş/randevu
+   bilgisi gibi), veya **Authentication** (OTP).
+3. Şablon metnini `{{1}}`, `{{2}}` gibi değişkenlerle yaz, örnekler ver.
+4. **Submit** — Meta genelde birkaç dakika–1 gün içinde onaylıyor/reddediyor.
+5. Onaylanan şablonlar `sendWhatsAppMessage`'a `template` tipi mesaj olarak
+   eklenmeli (şu an kodda yok, bu adıma gelince ayrıca eklenir).
+
+---
+
 ## Özet: hangi değer nereye gidiyor
 
 | Meta panelinden aldığın değer | Kod tarafında nereye |
@@ -177,6 +270,9 @@ modda devre dışı kalabilir — adım 7'yi önce bitir.
 | App Secret | Cloud Functions secret → `META_APP_SECRET` |
 | Webhook Verify Token (kendi ürettiğin) | Cloud Functions secret → `META_WEBHOOK_VERIFY_TOKEN` |
 | OAuth Redirect URI | `app/.env` → `EXPO_PUBLIC_META_OAUTH_REDIRECT_URI` |
+| WhatsApp Phone Number ID | Uygulama içi: Ayarlar > WhatsApp bağla ekranı |
+| WhatsApp Business Account ID | Uygulama içi: Ayarlar > WhatsApp bağla ekranı |
+| WhatsApp kalıcı erişim token'ı (System User) | Uygulama içi: Ayarlar > WhatsApp bağla ekranı |
 
 Cloud Functions secret'larını ayarlamak için (CLAUDE.md'de de var):
 ```bash
