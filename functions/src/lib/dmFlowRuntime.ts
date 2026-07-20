@@ -15,6 +15,29 @@ export async function getIgAccountByIgUserId(igUserId: string): Promise<IgAccoun
   return { id: doc.id, ...doc.data() } as IgAccount;
 }
 
+// The same connected account also owns a Facebook Page (see
+// exchangeInstagramCode) — Messenger webhook events key off the Page id
+// instead of the Instagram business account id, since Meta delivers them
+// under a separate "page" webhook object rather than "instagram".
+export async function getIgAccountByFbPageId(fbPageId: string): Promise<IgAccount | null> {
+  const snapshot = await db
+    .collection('igAccounts')
+    .where('fbPageId', '==', fbPageId)
+    .limit(1)
+    .get();
+  if (snapshot.empty) return null;
+  const doc = snapshot.docs[0];
+  return { id: doc.id, ...doc.data() } as IgAccount;
+}
+
+// Single entry point processWebhookEvent uses for every handler — a webhook
+// entry's top-level `id` is the Instagram business account id for Instagram
+// events, or the Facebook Page id for Messenger events, and this resolves
+// either without callers needing to know which platform sent it.
+export async function getIgAccountByPlatformId(id: string): Promise<IgAccount | null> {
+  return (await getIgAccountByIgUserId(id)) ?? (await getIgAccountByFbPageId(id));
+}
+
 export async function getAccessToken(igAccountId: string): Promise<string | null> {
   const doc = await db.collection('igAccountsSecrets').doc(igAccountId).get();
   return (doc.data()?.accessToken as string) ?? null;

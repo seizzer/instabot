@@ -7,7 +7,7 @@ import {
   findRuleForComment,
   getAccessToken,
   getActiveRulesForAccount,
-  getIgAccountByIgUserId,
+  getIgAccountByPlatformId,
   incrementRuleStats,
   logAutomationEvent,
   logMessage,
@@ -98,7 +98,7 @@ export const processWebhookEvent = onDocumentCreated(
 );
 
 async function handleCommentEvent(igBusinessAccountId: string, value: CommentChangeValue) {
-  const igAccount = await getIgAccountByIgUserId(igBusinessAccountId);
+  const igAccount = await getIgAccountByPlatformId(igBusinessAccountId);
   if (!igAccount || igAccount.status !== 'active') return;
 
   const accessToken = await getAccessToken(igAccount.id);
@@ -186,7 +186,7 @@ async function handleCommentEvent(igBusinessAccountId: string, value: CommentCha
 }
 
 async function handlePostbackEvent(igBusinessAccountId: string, messagingEvent: MessagingEvent) {
-  const igAccount = await getIgAccountByIgUserId(igBusinessAccountId);
+  const igAccount = await getIgAccountByPlatformId(igBusinessAccountId);
   if (!igAccount) return;
 
   const commenterIgId = messagingEvent.sender.id;
@@ -296,7 +296,7 @@ async function handleMentionEvent(igBusinessAccountId: string, value: MentionCha
   // is already preserved in webhookEvents, nothing further to do here.
   if (!value.comment_id) return;
 
-  const igAccount = await getIgAccountByIgUserId(igBusinessAccountId);
+  const igAccount = await getIgAccountByPlatformId(igBusinessAccountId);
   if (!igAccount || igAccount.status !== 'active') return;
 
   const accessToken = await getAccessToken(igAccount.id);
@@ -361,7 +361,7 @@ async function handleReactionEvent(igBusinessAccountId: string, messagingEvent: 
   const reaction = messagingEvent.reaction;
   if (!reaction || reaction.action !== 'react') return;
 
-  const igAccount = await getIgAccountByIgUserId(igBusinessAccountId);
+  const igAccount = await getIgAccountByPlatformId(igBusinessAccountId);
   if (!igAccount) return;
 
   const commenterIgId = messagingEvent.sender.id;
@@ -436,7 +436,7 @@ async function handleReactionEvent(igBusinessAccountId: string, messagingEvent: 
 // a CDN attachment. Unlike the comment-based 'mention' trigger, we get the
 // commenter's numeric IG id here, so a real conversation can be opened.
 async function handleStoryMentionEvent(igBusinessAccountId: string, messagingEvent: MessagingEvent) {
-  const igAccount = await getIgAccountByIgUserId(igBusinessAccountId);
+  const igAccount = await getIgAccountByPlatformId(igBusinessAccountId);
   if (!igAccount || igAccount.status !== 'active') return;
 
   const rules = await getActiveRulesForAccount(igAccount.id);
@@ -510,7 +510,7 @@ async function handleStoryMentionEvent(igBusinessAccountId: string, messagingEve
 // Someone replied to the account's own Story — arrives as a normal message
 // with `text` plus `reply_to.story` identifying which story.
 async function handleStoryReplyEvent(igBusinessAccountId: string, messagingEvent: MessagingEvent) {
-  const igAccount = await getIgAccountByIgUserId(igBusinessAccountId);
+  const igAccount = await getIgAccountByPlatformId(igBusinessAccountId);
   if (!igAccount || igAccount.status !== 'active') return;
 
   const rules = await getActiveRulesForAccount(igAccount.id);
@@ -583,7 +583,7 @@ async function handleStoryReplyEvent(igBusinessAccountId: string, messagingEvent
 }
 
 async function handleReferralEvent(igBusinessAccountId: string, messagingEvent: MessagingEvent) {
-  const igAccount = await getIgAccountByIgUserId(igBusinessAccountId);
+  const igAccount = await getIgAccountByPlatformId(igBusinessAccountId);
   if (!igAccount) return;
 
   const conversationId = `${igAccount.id}_${messagingEvent.sender.id}`;
@@ -595,7 +595,7 @@ async function handleReferralEvent(igBusinessAccountId: string, messagingEvent: 
 }
 
 async function handleSeenEvent(igBusinessAccountId: string, messagingEvent: MessagingEvent) {
-  const igAccount = await getIgAccountByIgUserId(igBusinessAccountId);
+  const igAccount = await getIgAccountByPlatformId(igBusinessAccountId);
   if (!igAccount) return;
 
   const conversationId = `${igAccount.id}_${messagingEvent.sender.id}`;
@@ -616,7 +616,7 @@ async function handleMessageEvent(igBusinessAccountId: string, messagingEvent: M
   const text = messagingEvent.message?.text;
   if (!text) return;
 
-  const igAccount = await getIgAccountByIgUserId(igBusinessAccountId);
+  const igAccount = await getIgAccountByPlatformId(igBusinessAccountId);
   if (!igAccount) return;
 
   const commenterIgId = messagingEvent.sender.id;
