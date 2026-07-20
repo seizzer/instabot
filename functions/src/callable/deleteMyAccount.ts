@@ -2,7 +2,7 @@ import { onCall, HttpsError } from 'firebase-functions/v2/https';
 import { getAuth } from 'firebase-admin/auth';
 import { REGION, db } from '../lib/admin';
 
-const COLLECTIONS_WITH_OWNER_UID = ['igAccounts', 'rules', 'automationLogs', 'conversations'];
+const COLLECTIONS_WITH_OWNER_UID = ['igAccounts', 'rules', 'automationLogs', 'broadcasts'];
 
 // Meta App Review requires a working "data deletion" path for connected
 // accounts — this satisfies that plus general user-initiated account deletion.
@@ -11,6 +11,7 @@ export const deleteMyAccount = onCall({ region: REGION }, async (request) => {
   const uid = request.auth.uid;
 
   const igAccountsSnap = await db.collection('igAccounts').where('ownerUid', '==', uid).get();
+  const conversationsSnap = await db.collection('conversations').where('ownerUid', '==', uid).get();
   const batch = db.batch();
 
   for (const collectionName of COLLECTIONS_WITH_OWNER_UID) {
@@ -24,6 +25,11 @@ export const deleteMyAccount = onCall({ region: REGION }, async (request) => {
   batch.delete(db.collection('subscriptions').doc(uid));
 
   await batch.commit();
+
+  // conversations/{id}/messages is a real subcollection — deleting the parent
+  // doc via batch doesn't cascade to it, so it needs its own recursive delete.
+  await Promise.all(conversationsSnap.docs.map((doc) => db.recursiveDelete(doc.ref)));
+
   await getAuth().deleteUser(uid);
 
   return { success: true };
