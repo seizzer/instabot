@@ -61,7 +61,7 @@ export function ConnectWhatsAppScreen({ navigation }: Props) {
         value={accessToken}
         onChangeText={setAccessToken}
         autoCapitalize="none"
-        secureTextEntry
+        autoCorrect={false}
         multiline
       />
 
