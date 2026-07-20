@@ -1,5 +1,10 @@
 import type { ExpoConfig } from 'expo/config';
 
+// EAS Build sets this to the eas.json profile name being built
+// (https://docs.expo.dev/build-reference/variables/) — unset for local
+// `expo start`/dev-client runs, which should behave like a development build.
+const isProductionBuild = process.env.EAS_BUILD_PROFILE === 'production';
+
 const config: ExpoConfig = {
   // User-visible app name (home screen, app store listing). The internal
   // slug/scheme/bundleIdentifier stay "instabot" — changing those would
@@ -27,6 +32,15 @@ const config: ExpoConfig = {
     // this avoids a manual App Store Connect prompt on every submission.
     infoPlist: {
       ITSAppUsesNonExemptEncryption: false,
+    },
+    // Without Push Notifications capability, iOS can never register for APNs,
+    // so Firebase Phone Auth can never use silent-push verification and always
+    // falls back to reCAPTCHA (which then fails with "unable to load external
+    // recaptcha dependencies"). We don't build user-facing push notifications
+    // yet (see CLAUDE.md), this entitlement exists solely for phone-auth's
+    // silent-push verification.
+    entitlements: {
+      'aps-environment': isProductionBuild ? 'production' : 'development',
     },
   },
   android: {
@@ -85,6 +99,13 @@ const config: ExpoConfig = {
         image: './assets/splash-icon.png',
         resizeMode: 'cover',
         backgroundColor: '#161512',
+        // Without this, iOS constrains the splash image to a small
+        // 100pt-wide centered box regardless of resizeMode — this is the
+        // plugin's own default "icon" style, not a bug in our config, but
+        // it isn't what we want for a full-bleed splash image.
+        ios: {
+          enableFullScreenImage_legacy: true,
+        },
       },
     ],
   ],

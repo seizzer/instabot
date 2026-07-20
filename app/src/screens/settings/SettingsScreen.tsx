@@ -16,6 +16,7 @@ import {
   updateDisplayName,
 } from '../../services/auth';
 import { isPasswordValid } from '../../utils/passwordPolicy';
+import { getAuthErrorMessage } from '../../utils/authErrors';
 import { deleteMyAccount, exchangeInstagramCode } from '../../services/functions';
 import { subscribeToIgAccounts } from '../../services/firestore';
 import { connectInstagramAccount } from '../../services/instagramAuth';
@@ -58,8 +59,8 @@ export function SettingsScreen() {
     try {
       const { authorizationCode, redirectUri } = await connectInstagramAccount();
       await exchangeInstagramCode({ authorizationCode, redirectUri });
-    } catch (error: any) {
-      Alert.alert(t('common.error') ?? '', error.message ?? '');
+    } catch (error) {
+      Alert.alert(t('common.error') ?? '', getAuthErrorMessage(error, t));
     } finally {
       setReconnecting(false);
     }
@@ -88,8 +89,8 @@ export function SettingsScreen() {
     try {
       await updateDisplayName(user.uid, displayName.trim());
       await refreshProfile();
-    } catch (error: any) {
-      Alert.alert(t('common.error') ?? '', error.message ?? '');
+    } catch (error) {
+      Alert.alert(t('common.error') ?? '', getAuthErrorMessage(error, t));
     } finally {
       setSavingProfile(false);
     }
@@ -113,8 +114,8 @@ export function SettingsScreen() {
       setConfirmNewPassword('');
       setShowPasswordChange(false);
       Alert.alert(t('common.done') ?? '');
-    } catch (error: any) {
-      Alert.alert(t('common.error') ?? '', error.message ?? '');
+    } catch (error) {
+      Alert.alert(t('common.error') ?? '', getAuthErrorMessage(error, t));
     } finally {
       setChangingPassword(false);
     }
@@ -125,8 +126,8 @@ export function SettingsScreen() {
     try {
       await resendVerificationEmail();
       Alert.alert(t('common.done') ?? '', t('auth.verificationSent') ?? '');
-    } catch (error: any) {
-      Alert.alert(t('common.error') ?? '', error.message ?? '');
+    } catch (error) {
+      Alert.alert(t('common.error') ?? '', getAuthErrorMessage(error, t));
     } finally {
       setResendingVerification(false);
     }

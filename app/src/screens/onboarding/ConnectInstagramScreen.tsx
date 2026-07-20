@@ -8,6 +8,8 @@ import { Card } from '../../components/Card';
 import { colors, spacing, typography } from '../../theme/theme';
 import { connectInstagramAccount } from '../../services/instagramAuth';
 import { exchangeInstagramCode } from '../../services/functions';
+import { logOut } from '../../services/auth';
+import { getAuthErrorMessage } from '../../utils/authErrors';
 import { OnboardingStackParamList } from '../../navigation/types';
 
 type Props = NativeStackScreenProps<OnboardingStackParamList, 'ConnectInstagram'>;
@@ -22,8 +24,8 @@ export function ConnectInstagramScreen({ navigation }: Props) {
       const { authorizationCode, redirectUri } = await connectInstagramAccount();
       const { data } = await exchangeInstagramCode({ authorizationCode, redirectUri });
       navigation.navigate('ConnectionSuccess', { igUsername: data.igUsername });
-    } catch (error: any) {
-      Alert.alert(t('common.error') ?? '', error.message ?? '');
+    } catch (error) {
+      Alert.alert(t('common.error') ?? '', getAuthErrorMessage(error, t));
     } finally {
       setLoading(false);
     }
@@ -44,6 +46,9 @@ export function ConnectInstagramScreen({ navigation }: Props) {
         onPress={handleConnect}
         loading={loading}
       />
+      <Text style={styles.logoutLink} onPress={() => logOut()}>
+        {t('settings.logout')}
+      </Text>
     </Screen>
   );
 }
@@ -54,4 +59,10 @@ const styles = StyleSheet.create({
   noteCard: { backgroundColor: colors.primarySoft, borderColor: colors.primarySoft },
   noteText: { ...typography.body, color: colors.primaryDark },
   spacer: { flex: 1, minHeight: spacing.xl },
+  logoutLink: {
+    ...typography.body,
+    color: colors.textMuted,
+    textAlign: 'center',
+    marginTop: spacing.lg,
+  },
 });

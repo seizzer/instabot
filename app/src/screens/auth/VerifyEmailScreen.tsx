@@ -6,6 +6,7 @@ import { Button } from '../../components/Button';
 import { colors, spacing, typography } from '../../theme/theme';
 import { useAuth } from '../../store/AuthContext';
 import { logOut, resendVerificationEmail } from '../../services/auth';
+import { getAuthErrorMessage } from '../../utils/authErrors';
 import { auth } from '../../services/firebase';
 
 export function VerifyEmailScreen() {
@@ -19,8 +20,8 @@ export function VerifyEmailScreen() {
     try {
       await resendVerificationEmail();
       Alert.alert(t('common.done') ?? '', t('auth.verificationSent') ?? '');
-    } catch (error: any) {
-      Alert.alert(t('common.error') ?? '', error.message ?? '');
+    } catch (error) {
+      Alert.alert(t('common.error') ?? '', getAuthErrorMessage(error, t));
     } finally {
       setResending(false);
     }
@@ -33,8 +34,8 @@ export function VerifyEmailScreen() {
       if (!auth.currentUser?.emailVerified) {
         Alert.alert(t('common.error') ?? '', t('auth.checkVerification') ?? '');
       }
-    } catch (error: any) {
-      Alert.alert(t('common.error') ?? '', error.message ?? '');
+    } catch (error) {
+      Alert.alert(t('common.error') ?? '', getAuthErrorMessage(error, t));
     } finally {
       setChecking(false);
     }

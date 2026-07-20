@@ -9,6 +9,7 @@ import { SocialAuthButtons } from '../../components/SocialAuthButtons';
 import { colors, spacing, typography } from '../../theme/theme';
 import { signUpWithEmail } from '../../services/auth';
 import { isPasswordValid } from '../../utils/passwordPolicy';
+import { getAuthErrorMessage } from '../../utils/authErrors';
 import { AuthStackParamList } from '../../navigation/types';
 import { SupportedLanguage } from '../../i18n';
 
@@ -33,8 +34,8 @@ export function SignupScreen({ navigation }: Props) {
     setLoading(true);
     try {
       await signUpWithEmail(email.trim(), password, (i18n.language as SupportedLanguage) ?? 'tr');
-    } catch (error: any) {
-      Alert.alert(t('common.error') ?? '', error.message ?? '');
+    } catch (error) {
+      Alert.alert(t('common.error') ?? '', getAuthErrorMessage(error, t));
     } finally {
       setLoading(false);
     }

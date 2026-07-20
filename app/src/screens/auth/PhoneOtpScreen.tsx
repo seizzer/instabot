@@ -7,6 +7,7 @@ import { TextField } from '../../components/TextField';
 import { Button } from '../../components/Button';
 import { colors, spacing, typography } from '../../theme/theme';
 import { confirmPhoneOtp, sendPhoneOtp } from '../../services/phoneAuth';
+import { getAuthErrorMessage } from '../../utils/authErrors';
 import { AuthStackParamList } from '../../navigation/types';
 import { SupportedLanguage } from '../../i18n';
 
@@ -23,8 +24,8 @@ export function PhoneOtpScreen({ route }: Props) {
     setLoading(true);
     try {
       await confirmPhoneOtp(code.trim(), (i18n.language as SupportedLanguage) ?? 'tr');
-    } catch (error: any) {
-      Alert.alert(t('common.error') ?? '', error.message ?? '');
+    } catch (error) {
+      Alert.alert(t('common.error') ?? '', getAuthErrorMessage(error, t));
     } finally {
       setLoading(false);
     }
@@ -34,8 +35,8 @@ export function PhoneOtpScreen({ route }: Props) {
     setResending(true);
     try {
       await sendPhoneOtp(phoneNumber);
-    } catch (error: any) {
-      Alert.alert(t('common.error') ?? '', error.message ?? '');
+    } catch (error) {
+      Alert.alert(t('common.error') ?? '', getAuthErrorMessage(error, t));
     } finally {
       setResending(false);
     }

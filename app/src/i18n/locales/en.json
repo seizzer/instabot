@@ -42,7 +42,31 @@
     "verifyEmailSubtitle": "We sent a verification link to {{email}}. After clicking it, continue below.",
     "resendVerificationEmail": "Resend",
     "verificationSent": "Verification email sent.",
-    "checkVerification": "I've verified, continue"
+    "checkVerification": "I've verified, continue",
+    "forgotPassword": "Forgot password",
+    "forgotPasswordTitle": "Reset your password",
+    "forgotPasswordSubtitle": "Enter the email address on your account and we'll send you a password reset link.",
+    "sendResetLinkButton": "Send reset link",
+    "resetEmailSent": "Password reset link sent. Check your inbox (and spam folder).",
+    "backToLogin": "Back to login",
+    "errors": {
+      "invalid-credential": "That email or password is incorrect.",
+      "user-not-found": "No account found with this email.",
+      "wrong-password": "Incorrect password.",
+      "email-already-in-use": "This email address is already in use.",
+      "invalid-email": "Enter a valid email address.",
+      "weak-password": "That password is too weak — please choose a stronger one.",
+      "too-many-requests": "Too many attempts, please try again in a bit.",
+      "network-request-failed": "Network problem, please try again.",
+      "internal-error": "Something unexpected happened, please try again.",
+      "user-disabled": "This account has been disabled.",
+      "requires-recent-login": "Please sign in again to do this.",
+      "invalid-verification-code": "That code is incorrect.",
+      "code-expired": "That code has expired, request a new one.",
+      "invalid-phone-number": "Enter a valid phone number.",
+      "quota-exceeded": "Too many attempts, please try again later.",
+      "default": "Something went wrong, please try again."
+    }
   },
   "onboarding": {
     "connectTitle": "Connect your Instagram account",

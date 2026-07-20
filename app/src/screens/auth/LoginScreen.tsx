@@ -8,6 +8,7 @@ import { Button } from '../../components/Button';
 import { SocialAuthButtons } from '../../components/SocialAuthButtons';
 import { colors, spacing, typography } from '../../theme/theme';
 import { logInWithEmail } from '../../services/auth';
+import { getAuthErrorMessage } from '../../utils/authErrors';
 import { AuthStackParamList } from '../../navigation/types';
 
 type Props = NativeStackScreenProps<AuthStackParamList, 'Login'>;
@@ -22,8 +23,8 @@ export function LoginScreen({ navigation }: Props) {
     setLoading(true);
     try {
       await logInWithEmail(email.trim(), password);
-    } catch (error: any) {
-      Alert.alert(t('common.error') ?? '', error.message ?? '');
+    } catch (error) {
+      Alert.alert(t('common.error') ?? '', getAuthErrorMessage(error, t));
     } finally {
       setLoading(false);
     }
@@ -48,6 +49,9 @@ export function LoginScreen({ navigation }: Props) {
           secureTextEntry
         />
         <Button label={t('auth.loginButton')} onPress={handleLogin} loading={loading} />
+        <Text style={styles.forgotPasswordLink} onPress={() => navigation.navigate('ForgotPassword')}>
+          {t('auth.forgotPassword')}
+        </Text>
       </View>
 
       <SocialAuthButtons />
@@ -70,6 +74,12 @@ const styles = StyleSheet.create({
   logo: { width: 96, height: 96, alignSelf: 'center', marginBottom: spacing.md },
   title: { ...typography.h1, color: colors.text, marginBottom: spacing.lg, textAlign: 'center' },
   form: { marginBottom: spacing.lg },
+  forgotPasswordLink: {
+    ...typography.body,
+    color: colors.primary,
+    textAlign: 'center',
+    marginTop: spacing.md,
+  },
   phoneLink: {
     ...typography.bodyBold,
     color: colors.primary,

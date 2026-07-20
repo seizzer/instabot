@@ -13,6 +13,7 @@ import {
   signInWithGoogle,
 } from '../services/socialAuth';
 import { SupportedLanguage } from '../i18n';
+import { getAuthErrorMessage } from '../utils/authErrors';
 import { colors, radius, spacing, typography } from '../theme/theme';
 
 export function SocialAuthButtons() {
@@ -36,7 +37,7 @@ export function SocialAuthButtons() {
     ) {
       return;
     }
-    Alert.alert(t('common.error') ?? '', error?.message ?? '');
+    Alert.alert(t('common.error') ?? '', getAuthErrorMessage(error, t));
   };
 
   return (

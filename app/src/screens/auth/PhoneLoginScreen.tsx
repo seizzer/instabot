@@ -7,6 +7,7 @@ import { TextField } from '../../components/TextField';
 import { Button } from '../../components/Button';
 import { colors, spacing, typography } from '../../theme/theme';
 import { sendPhoneOtp } from '../../services/phoneAuth';
+import { getAuthErrorMessage } from '../../utils/authErrors';
 import { AuthStackParamList } from '../../navigation/types';
 
 type Props = NativeStackScreenProps<AuthStackParamList, 'PhoneLogin'>;
@@ -28,8 +29,8 @@ export function PhoneLoginScreen({ navigation }: Props) {
     try {
       await sendPhoneOtp(trimmed);
       navigation.navigate('PhoneOtp', { phoneNumber: trimmed });
-    } catch (error: any) {
-      Alert.alert(t('common.error') ?? '', error.message ?? '');
+    } catch (error) {
+      Alert.alert(t('common.error') ?? '', getAuthErrorMessage(error, t));
     } finally {
       setLoading(false);
     }

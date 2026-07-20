@@ -42,7 +42,31 @@
     "verifyEmailSubtitle": "{{email}} adresine bir doğrulama linki gönderdik. Linke tıkladıktan sonra aşağıdan devam et.",
     "resendVerificationEmail": "Tekrar gönder",
     "verificationSent": "Doğrulama e-postası gönderildi.",
-    "checkVerification": "Doğruladım, devam et"
+    "checkVerification": "Doğruladım, devam et",
+    "forgotPassword": "Şifremi unuttum",
+    "forgotPasswordTitle": "Şifreni sıfırla",
+    "forgotPasswordSubtitle": "Hesabına kayıtlı e-posta adresini gir, sana bir şifre sıfırlama linki gönderelim.",
+    "sendResetLinkButton": "Sıfırlama linki gönder",
+    "resetEmailSent": "Şifre sıfırlama linki gönderildi. Gelen kutunu (ve spam klasörünü) kontrol et.",
+    "backToLogin": "Girişe dön",
+    "errors": {
+      "invalid-credential": "E-posta veya şifre hatalı.",
+      "user-not-found": "Bu e-posta ile kayıtlı bir hesap bulunamadı.",
+      "wrong-password": "Şifre hatalı.",
+      "email-already-in-use": "Bu e-posta adresi zaten kullanımda.",
+      "invalid-email": "Geçerli bir e-posta adresi gir.",
+      "weak-password": "Şifre çok zayıf, lütfen daha güçlü bir şifre seç.",
+      "too-many-requests": "Çok fazla deneme yapıldı, lütfen biraz sonra tekrar dene.",
+      "network-request-failed": "İnternet bağlantısı sorunu, lütfen tekrar dene.",
+      "internal-error": "Beklenmeyen bir hata oluştu, lütfen tekrar dene.",
+      "user-disabled": "Bu hesap devre dışı bırakılmış.",
+      "requires-recent-login": "Bu işlem için tekrar giriş yapman gerekiyor.",
+      "invalid-verification-code": "Girdiğin kod hatalı.",
+      "code-expired": "Kodun süresi doldu, yeni kod iste.",
+      "invalid-phone-number": "Geçerli bir telefon numarası gir.",
+      "quota-exceeded": "Çok fazla deneme yapıldı, lütfen daha sonra tekrar dene.",
+      "default": "Bir şeyler ters gitti, lütfen tekrar dene."
+    }
   },
   "onboarding": {
     "connectTitle": "Instagram hesabını bağla",
