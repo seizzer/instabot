@@ -33,9 +33,12 @@ export async function connectInstagramAccount(): Promise<InstagramAuthResult> {
   // Empty string (unset in .env) must also fall through — `??` only catches
   // null/undefined, and an empty EXPO_PUBLIC_META_OAUTH_REDIRECT_URI= line
   // resolves to "" at runtime, not undefined.
+  // `path: 'redirect'` matters — without it makeRedirectUri produces a bare
+  // "instabot://" (empty host), which Meta's dashboard rejects when adding it
+  // to Valid OAuth Redirect URIs ("should represent a valid URL").
   const redirectUri =
     process.env.EXPO_PUBLIC_META_OAUTH_REDIRECT_URI ||
-    AuthSession.makeRedirectUri({ scheme: 'instabot' });
+    AuthSession.makeRedirectUri({ scheme: 'instabot', path: 'redirect' });
 
   const request = new AuthSession.AuthRequest({
     clientId: appId,
