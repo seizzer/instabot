@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Chatterly — WhatsApp bağla</title>
+<style>
+  body {
+    margin: 0;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #161512;
+    color: #f5f0e6;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    text-align: center;
+    padding: 24px;
+  }
+  button {
+    background: #d8a651;
+    color: #161512;
+    border: none;
+    border-radius: 12px;
+    padding: 16px 28px;
+    font-size: 16px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+  button:disabled { opacity: 0.5; }
+  p { max-width: 320px; line-height: 1.5; }
+</style>
+</head>
+<body>
+  <div>
+    <p id="message">WhatsApp Business hesabını bağlamak için aşağıya dokun.</p>
+    <button id="loginButton">WhatsApp'a Bağlan</button>
+  </div>
+
+<script>
+  // Runs inside a React Native WebView (see ConnectWhatsAppScreen.tsx).
+  // ?appId= and ?configId= are passed in the WebView's source URL rather
+  // than baked into this static file, so the same hosted page works across
+  // dev/preview/production without a separate build step.
+  var params = new URLSearchParams(window.location.search);
+  var APP_ID = params.get('appId');
+  var CONFIG_ID = params.get('configId');
+
+  var collected = { code: null, wabaId: null, phoneNumberId: null };
+
+  function postToApp() {
+    if (window.ReactNativeWebView) {
+      window.ReactNativeWebView.postMessage(JSON.stringify(collected));
+    }
+  }
+
+  function maybeFinish() {
+    if (collected.code && collected.wabaId && collected.phoneNumberId) {
+      document.getElementById('message').textContent = 'Bağlanıyor…';
+      postToApp();
+    }
+  }
+
+  // Meta's Embedded Signup flow posts this message separately from the
+  // FB.login callback below — it carries the actual WABA id and phone
+  // number id, which FB.login's own response does not include.
+  // https://developers.facebook.com/docs/whatsapp/embedded-signup/implementation
+  window.addEventListener('message', function (event) {
+    if (!event.origin || event.origin.indexOf('facebook.com') === -1) return;
+    try {
+      var data = JSON.parse(event.data);
+      if (data.type === 'WA_EMBEDDED_SIGNUP' && data.event === 'FINISH') {
+        collected.wabaId = data.data.waba_id;
+        collected.phoneNumberId = data.data.phone_number_id;
+        maybeFinish();
+      }
+    } catch (e) {
+      // Non-JSON postMessage traffic from the SDK itself — ignore.
+    }
+  });
+
+  window.fbAsyncInit = function () {
+    FB.init({ appId: APP_ID, xfbml: false, version: 'v21.0' });
+  };
+
+  (function (d, s, id) {
+    var js, fjs = d.getElementsByTagName(s)[0];
+    if (d.getElementById(id)) return;
+    js = d.createElement(s);
+    js.id = id;
+    js.src = 'https://connect.facebook.net/en_US/sdk.js';
+    fjs.parentNode.insertBefore(js, fjs);
+  })(document, 'script', 'facebook-jssdk');
+
+  document.getElementById('loginButton').addEventListener('click', function () {
+    if (typeof FB === 'undefined') {
+      document.getElementById('message').textContent = 'Yükleniyor, birkaç saniye sonra tekrar dene.';
+      return;
+    }
+    FB.login(
+      function (response) {
+        if (response.authResponse && response.authResponse.code) {
+          collected.code = response.authResponse.code;
+          maybeFinish();
+        } else {
+          document.getElementById('message').textContent = 'Bağlantı iptal edildi veya başarısız oldu.';
+        }
+      },
+      {
+        config_id: CONFIG_ID,
+        response_type: 'code',
+        override_default_response_type: true,
+        extras: { setup: {}, sessionInfoVersion: '3' },
+      }
+    );
+  });
+</script>
+</body>
+</html>

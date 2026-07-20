@@ -30,6 +30,21 @@ export const connectWhatsAppAccount = httpsCallable<
   ConnectWhatsAppAccountResponse
 >(functions, 'connectWhatsAppAccount');
 
+export interface ExchangeWhatsAppEmbeddedSignupCodeRequest {
+  code: string;
+  wabaId: string;
+  phoneNumberId: string;
+}
+export interface ExchangeWhatsAppEmbeddedSignupCodeResponse {
+  whatsAppAccountId: string;
+  displayPhoneNumber: string;
+  webhookSubscribed: boolean;
+}
+export const exchangeWhatsAppEmbeddedSignupCode = httpsCallable<
+  ExchangeWhatsAppEmbeddedSignupCodeRequest,
+  ExchangeWhatsAppEmbeddedSignupCodeResponse
+>(functions, 'exchangeWhatsAppEmbeddedSignupCode');
+
 export interface PreviewAiReplyRequest {
   commentText: string;
   tone: 'samimi' | 'resmi';

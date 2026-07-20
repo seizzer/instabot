@@ -179,6 +179,8 @@
     "whatsAppWabaIdLabel": "WhatsApp Business Account ID",
     "whatsAppAccessTokenLabel": "Permanent access token",
     "whatsAppConnected": "{{phoneNumber}} connected.",
+    "whatsAppUseManualEntry": "Advanced: enter ID/token manually",
+    "whatsAppUseEmbeddedSignup": "Go back",
     "language": "Language",
     "notifications": "Notifications",
     "subscription": "Subscription",

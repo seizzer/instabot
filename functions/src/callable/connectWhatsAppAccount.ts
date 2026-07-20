@@ -1,6 +1,7 @@
 import { onCall, HttpsError } from 'firebase-functions/v2/https';
-import { REGION, db } from '../lib/admin';
+import { REGION } from '../lib/admin';
 import { getWhatsAppPhoneNumberInfo } from '../lib/graphApi';
+import { upsertWhatsAppAccount } from '../lib/whatsAppAccountStorage';
 
 interface Request {
   phoneNumberId: string;
@@ -28,31 +29,14 @@ export const connectWhatsAppAccount = onCall<Request>({ region: REGION }, async 
     );
   }
 
-  // Reconnecting the same number (e.g. after rotating the token) updates the
-  // existing doc rather than creating a new one — same reasoning as
-  // exchangeInstagramCode's igAccounts upsert.
-  const existing = await db
-    .collection('whatsAppAccounts')
-    .where('ownerUid', '==', request.auth.uid)
-    .where('phoneNumberId', '==', phoneNumberId)
-    .limit(1)
-    .get();
-  const accountRef = existing.empty ? db.collection('whatsAppAccounts').doc() : existing.docs[0].ref;
+  const whatsAppAccountId = await upsertWhatsAppAccount({
+    ownerUid: request.auth.uid,
+    phoneNumberId,
+    wabaId,
+    displayPhoneNumber: info.display_phone_number,
+    verifiedName: info.verified_name,
+    accessToken,
+  });
 
-  await accountRef.set(
-    {
-      ownerUid: request.auth.uid,
-      phoneNumberId,
-      wabaId,
-      displayPhoneNumber: info.display_phone_number,
-      verifiedName: info.verified_name,
-      status: 'active',
-      connectedAt: new Date(),
-    },
-    { merge: true }
-  );
-
-  await db.collection('whatsAppAccountsSecrets').doc(accountRef.id).set({ accessToken });
-
-  return { whatsAppAccountId: accountRef.id, displayPhoneNumber: info.display_phone_number };
+  return { whatsAppAccountId, displayPhoneNumber: info.display_phone_number };
 });

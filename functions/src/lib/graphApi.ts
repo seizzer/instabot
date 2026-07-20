@@ -232,6 +232,27 @@ export async function getWhatsAppPhoneNumberInfo(phoneNumberId: string, accessTo
   );
 }
 
+// Embedded Signup hands back a `code` from the JS SDK's FB.login popup, not
+// a redirect — Meta's server-side exchange for this flow takes no
+// redirect_uri (unlike exchangeCodeForToken, used for Instagram's actual
+// OAuth redirect flow).
+export async function exchangeEmbeddedSignupCode(params: {
+  appId: string;
+  appSecret: string;
+  code: string;
+}) {
+  return graphRequest<{ access_token: string; token_type: string; expires_in: number }>(
+    '/oauth/access_token',
+    { client_id: params.appId, client_secret: params.appSecret, code: params.code }
+  );
+}
+
+// Registers our webhook to receive this WABA's message events — the
+// Embedded Signup equivalent of subscribePageWebhooks for Instagram/Messenger.
+export async function subscribeWhatsAppWebhooks(wabaId: string, accessToken: string) {
+  await graphRequest(`/${wabaId}/subscribed_apps`, { access_token: accessToken }, 'POST');
+}
+
 function toWhatsAppButtons(buttons: DmFlowButton[]) {
   // WhatsApp interactive reply buttons: max 3, and each title is capped at
   // 20 characters by Meta — longer labels get silently rejected by the API,

@@ -260,6 +260,33 @@ Template** gerekir:
 5. Onaylanan şablonlar `sendWhatsAppMessage`'a `template` tipi mesaj olarak
    eklenmeli (şu an kodda yok, bu adıma gelince ayrıca eklenir).
 
+### 10.7 Embedded Signup (gerçek kullanıcılar için — 10.1-10.2'nin yerini alır)
+
+10.1-10.2'deki manuel ID/token yapıştırma yöntemi **sadece senin kendi
+testin için**. Gerçek müşterilerin "WhatsApp'a Bağlan" deyip kendi
+numaralarını girmesi için bu akış gerekiyor — kod tarafı hazır
+(`ConnectWhatsAppScreen`'deki WebView + `exchangeWhatsAppEmbeddedSignupCode`).
+
+1. App Dashboard → **Facebook Login for Business** → **Configurations** →
+   **Create Configuration**.
+2. Configuration adı ver (örn. "Chatterly WhatsApp Signup").
+3. **Assets** kısmında **WhatsApp Business** seç, izinler:
+   `whatsapp_business_management`, `whatsapp_business_messaging`.
+4. Kaydet — çıkan **Configuration ID**'yi kopyala.
+
+**Buraya yapıştır:** Bu ID'yi `app/.env` → `EXPO_PUBLIC_META_WHATSAPP_CONFIG_ID`
+alanına yaz.
+
+5. **App Review > Permissions and Features** → `whatsapp_business_management`
+   iznini **Request** et (Business Verification — adım 10.5 — tamamlanmış
+   olmalı, aksi halde bu izin talebi reddedilir).
+6. Onaylanana kadar (genelde birkaç gün) uygulamadaki WhatsApp bağlama
+   ekranı sadece **"Test WhatsApp Business Account"**ı görebilir — kendi
+   gerçek numaranı test etmek için ekranın altındaki **"Gelişmiş: ID/token'ı
+   manuel gir"** linkiyle 10.1-10.2'deki yöntemi kullanmaya devam edebilirsin.
+7. Onay gelince Embedded Signup ekranı gerçek müşterilerin kendi
+   numaralarını eklemesine izin verir — hiçbir ID/token görmezler.
+
 ---
 
 ## Özet: hangi değer nereye gidiyor
@@ -273,6 +300,7 @@ Template** gerekir:
 | WhatsApp Phone Number ID | Uygulama içi: Ayarlar > WhatsApp bağla ekranı |
 | WhatsApp Business Account ID | Uygulama içi: Ayarlar > WhatsApp bağla ekranı |
 | WhatsApp kalıcı erişim token'ı (System User) | Uygulama içi: Ayarlar > WhatsApp bağla ekranı |
+| WhatsApp Embedded Signup Configuration ID | `app/.env` → `EXPO_PUBLIC_META_WHATSAPP_CONFIG_ID` |
 
 Cloud Functions secret'larını ayarlamak için (CLAUDE.md'de de var):
 ```bash

@@ -179,6 +179,8 @@
     "whatsAppWabaIdLabel": "WhatsApp Business Account ID",
     "whatsAppAccessTokenLabel": "Kalıcı erişim token'ı",
     "whatsAppConnected": "{{phoneNumber}} bağlandı.",
+    "whatsAppUseManualEntry": "Gelişmiş: ID/token'ı manuel gir",
+    "whatsAppUseEmbeddedSignup": "Geri dön",
     "language": "Dil",
     "notifications": "Bildirimler",
     "subscription": "Abonelik",
