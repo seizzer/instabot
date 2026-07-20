@@ -8,8 +8,10 @@ import { Button } from '../../components/Button';
 import { colors, spacing, typography } from '../../theme/theme';
 import { useAuth } from '../../store/AuthContext';
 import { subscribeToBroadcasts, subscribeToIgAccounts } from '../../services/firestore';
-import { sendBroadcast } from '../../services/functions';
+import { getBroadcastRecipientCount, sendBroadcast } from '../../services/functions';
 import { Broadcast, IgAccount } from '../../types/models';
+
+const MAX_RECIPIENTS_PER_SEND = 100;
 
 function formatTime(ms: number): string {
   return new Date(ms).toLocaleString('tr-TR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
@@ -23,6 +25,7 @@ export function BroadcastScreen() {
   const [text, setText] = useState('');
   const [targetTag, setTargetTag] = useState('');
   const [sending, setSending] = useState(false);
+  const [recipientCount, setRecipientCount] = useState<number | null>(null);
 
   useEffect(() => {
     if (!user) return;
@@ -35,6 +38,23 @@ export function BroadcastScreen() {
   }, [user]);
 
   const activeIgAccount = igAccounts[0] ?? null;
+
+  // Debounced so retyping the tag filter doesn't fire a callable per keystroke.
+  useEffect(() => {
+    if (!activeIgAccount) {
+      setRecipientCount(null);
+      return;
+    }
+    const timeout = setTimeout(() => {
+      getBroadcastRecipientCount({
+        igAccountId: activeIgAccount.id,
+        targetTag: targetTag.trim() || null,
+      })
+        .then(({ data }) => setRecipientCount(data.count))
+        .catch(() => setRecipientCount(null));
+    }, 400);
+    return () => clearTimeout(timeout);
+  }, [activeIgAccount, targetTag]);
 
   const handleSend = async () => {
     if (!activeIgAccount || !text.trim()) return;
@@ -75,6 +95,14 @@ export function BroadcastScreen() {
         value={targetTag}
         onChangeText={setTargetTag}
       />
+      {recipientCount !== null && (
+        <Text style={styles.recipientCountText}>
+          {t('inbox.broadcastRecipientCount', { count: recipientCount })}
+          {recipientCount > MAX_RECIPIENTS_PER_SEND
+            ? ` ${t('inbox.broadcastRecipientCountCapped', { max: MAX_RECIPIENTS_PER_SEND })}`
+            : ''}
+        </Text>
+      )}
       <Button label={t('inbox.send')} onPress={handleSend} loading={sending} style={styles.sendButton} />
 
       <FlatList
@@ -99,6 +127,12 @@ const styles = StyleSheet.create({
   screen: { paddingHorizontal: spacing.lg, paddingTop: spacing.lg },
   title: { ...typography.h1, color: colors.text, marginBottom: spacing.xs },
   subtitle: { ...typography.body, color: colors.textMuted, marginBottom: spacing.lg },
+  recipientCountText: {
+    ...typography.caption,
+    color: colors.textMuted,
+    marginTop: -spacing.sm,
+    marginBottom: spacing.md,
+  },
   sendButton: { marginBottom: spacing.lg },
   historyList: { paddingBottom: spacing.xxl },
   historyTitle: { ...typography.h3, color: colors.text, marginBottom: spacing.sm },

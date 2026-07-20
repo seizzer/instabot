@@ -93,3 +93,15 @@ export const sendBroadcast = httpsCallable<SendBroadcastRequest, SendBroadcastRe
   functions,
   'sendBroadcast'
 );
+
+export interface GetBroadcastRecipientCountRequest {
+  igAccountId: string;
+  targetTag: string | null;
+}
+export interface GetBroadcastRecipientCountResponse {
+  count: number;
+}
+export const getBroadcastRecipientCount = httpsCallable<
+  GetBroadcastRecipientCountRequest,
+  GetBroadcastRecipientCountResponse
+>(functions, 'getBroadcastRecipientCount');

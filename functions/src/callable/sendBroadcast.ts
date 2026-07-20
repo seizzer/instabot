@@ -2,6 +2,7 @@ import { onCall, HttpsError } from 'firebase-functions/v2/https';
 import { REGION, db } from '../lib/admin';
 import { sendDirectMessage } from '../lib/graphApi';
 import { getAccessToken, logMessage } from '../lib/dmFlowRuntime';
+import { getEligibleRecipientsQuery } from '../lib/broadcastEligibility';
 
 interface Request {
   igAccountId: string;
@@ -9,11 +10,6 @@ interface Request {
   targetTag: string | null;
 }
 
-// Messenger Platform's standard messaging window is 24 hours from the
-// recipient's last interaction — broadcasting outside it is exactly the
-// "cold DM" behavior Meta's policy (and CLAUDE.md's architecture rules)
-// forbid, so this is a hard filter, not a suggestion.
-const MESSAGING_WINDOW_MS = 24 * 60 * 60 * 1000;
 const MAX_RECIPIENTS_PER_CALL = 100;
 
 export const sendBroadcast = onCall<Request>({ region: REGION, timeoutSeconds: 300 }, async (request) => {
@@ -32,16 +28,9 @@ export const sendBroadcast = onCall<Request>({ region: REGION, timeoutSeconds: 3
   const accessToken = await getAccessToken(igAccountId);
   if (!accessToken) throw new HttpsError('failed-precondition', 'Erişim token bulunamadı.');
 
-  const windowStart = new Date(Date.now() - MESSAGING_WINDOW_MS);
-  let query = db
-    .collection('conversations')
-    .where('igAccountId', '==', igAccountId)
-    .where('lastInteractionAt', '>=', windowStart)
-    .limit(MAX_RECIPIENTS_PER_CALL);
-  if (targetTag) {
-    query = query.where('tags', 'array-contains', targetTag) as typeof query;
-  }
-  const eligible = await query.get();
+  const eligible = await getEligibleRecipientsQuery(igAccountId, targetTag)
+    .limit(MAX_RECIPIENTS_PER_CALL)
+    .get();
 
   const broadcastRef = await db.collection('broadcasts').add({
     ownerUid: request.auth.uid,

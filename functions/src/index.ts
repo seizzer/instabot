@@ -10,3 +10,4 @@ export { deleteMyAccount } from './callable/deleteMyAccount';
 export { mintCustomTokenForPhoneAuth } from './callable/mintCustomTokenForPhoneAuth';
 export { sendManualMessage } from './callable/sendManualMessage';
 export { sendBroadcast } from './callable/sendBroadcast';
+export { getBroadcastRecipientCount } from './callable/getBroadcastRecipientCount';
