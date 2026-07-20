@@ -66,6 +66,10 @@ export function SelectPostStep({ igAccountId, targetScope, targetPostIds, onChan
             data={media}
             numColumns={3}
             keyExtractor={(item) => item.id}
+            // This grid lives inside RuleWizardScreen's own scrolling Screen —
+            // a bounded list of recent posts, so it scrolls with the page
+            // instead of nesting a second VirtualizedList-in-ScrollView.
+            scrollEnabled={false}
             renderItem={({ item }) => {
               const selected = targetPostIds.includes(item.id);
               return (
